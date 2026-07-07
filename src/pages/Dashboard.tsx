@@ -14,6 +14,7 @@ import {
   Calendar,
   MessageSquare,
   Pill,
+  RotateCcw,
 } from 'lucide-react';
 import { Card } from '../components/Card';
 import { Button } from '../components/Button';
@@ -77,9 +78,26 @@ export const Dashboard: React.FC = () => {
   const [sleepDuration, setSleepDuration] = useState('');
   const [sleepQuality, setSleepQuality] = useState<'Excellent' | 'Good' | 'Fair' | 'Poor'>('Good');
 
+  const MAX_LOGS = 50;
+
   // Trigger metrics update custom event
   const notifyMetricsUpdated = () => {
     window.dispatchEvent(new Event('metrics-updated'));
+  };
+
+  // Reset semua data harian (total tetap, log hari ini dihapus)
+  const handleResetToday = () => {
+    if (!confirm('Reset semua pencatatan hari ini? Data historis tetap tersimpan.')) return;
+    const reset = {
+      ...metrics,
+      waterIntake: { ...metrics.waterIntake, current: 0, logs: [] },
+      calories: { ...metrics.calories, current: 0, logs: [] },
+      exercise: { ...metrics.exercise, duration: 0, steps: 0, logs: [] },
+      sleep: { ...metrics.sleep, duration: 0, logs: [] },
+    };
+    setMetrics(reset);
+    speak('Data harian berhasil direset. Semangat menjalani hari baru!', 'success', 5000);
+    notifyMetricsUpdated();
   };
 
   // BMI calculations
@@ -145,7 +163,7 @@ export const Dashboard: React.FC = () => {
       waterIntake: {
         ...metrics.waterIntake,
         current: metrics.waterIntake.current + amount,
-        logs: [newLog, ...metrics.waterIntake.logs],
+        logs: [newLog, ...metrics.waterIntake.logs].slice(0, MAX_LOGS),
       },
     };
 
@@ -209,7 +227,7 @@ export const Dashboard: React.FC = () => {
       calories: {
         ...metrics.calories,
         current: metrics.calories.current + cals,
-        logs: [newLog, ...metrics.calories.logs],
+        logs: [newLog, ...metrics.calories.logs].slice(0, MAX_LOGS),
       },
     };
 
@@ -253,7 +271,7 @@ export const Dashboard: React.FC = () => {
       exercise: {
         duration: metrics.exercise.duration + duration,
         steps: metrics.exercise.steps + steps,
-        logs: [newLog, ...metrics.exercise.logs],
+        logs: [newLog, ...metrics.exercise.logs].slice(0, MAX_LOGS),
       },
     };
 
@@ -295,7 +313,7 @@ export const Dashboard: React.FC = () => {
       sleep: {
         duration,
         quality: sleepQuality,
-        logs: [newLog, ...metrics.sleep.logs],
+        logs: [newLog, ...metrics.sleep.logs].slice(0, MAX_LOGS),
       },
     };
 
@@ -360,7 +378,9 @@ export const Dashboard: React.FC = () => {
     return 'Camilan';
   };
 
-  const latestSession = sessions.length > 0 ? sessions[0] : null;
+  const latestSession = sessions.length > 0
+    ? [...sessions].sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())[0]
+    : null;
 
   return (
     <motion.div
@@ -370,6 +390,21 @@ export const Dashboard: React.FC = () => {
       className="space-y-8 max-w-7xl mx-auto"
     >
       
+      {/* Daily Reset Bar */}
+      <div className="flex items-center justify-between px-1">
+        <p className="text-xs text-gray-400 dark:text-gray-500">
+          Catat aktivitas kesehatan Anda hari ini
+        </p>
+        <button
+          onClick={handleResetToday}
+          className="flex items-center gap-1.5 text-xs font-semibold text-gray-500 hover:text-rose-500 dark:text-gray-400 dark:hover:text-rose-400 transition-colors"
+          title="Reset semua data hari ini"
+        >
+          <RotateCcw className="w-3.5 h-3.5" />
+          Reset Hari Ini
+        </button>
+      </div>
+
       {/* 2-Column Grid for Main Metrics */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         

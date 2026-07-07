@@ -15,7 +15,7 @@ export const INITIAL_SETTINGS: AppSettings = {
   theme: 'system',
   language: 'id', // Default to Indonesian
   apiKey: '',
-  model: 'gemini-1.5-flash',
+  model: 'gemini-2.5-flash',
   systemInstruction: 'Anda adalah HealthMate AI, asisten kesehatan edukatif profesional yang ramah dan empati. Berikan edukasi kesehatan umum dan rekomendasi gaya hidup sehat. Selalu sertakan penafian (disclaimer) bahwa informasi ini bukan merupakan diagnosis medis dan tidak menggantikan konsultasi dengan dokter.',
   temperature: 0.7,
   plugins: {

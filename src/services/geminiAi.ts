@@ -24,19 +24,29 @@ export const getGeminiResponse = async (
 ): Promise<GeminiResponse> => {
   const apiKey = settings.apiKey?.trim();
 
+  const enabledPlugins = Object.entries(settings.plugins ?? {})
+    .filter(([, enabled]) => enabled)
+    .map(([name]) => name);
+
   // Jika API key tidak ada, fallback ke mock
   if (!apiKey) {
-    return import('./mockAi').then(({ getMockResponse }) => getMockResponse(userPrompt));
+    return import('./mockAi').then(({ getMockResponse }) => getMockResponse(userPrompt, enabledPlugins));
   }
 
   const model = settings.model?.trim() || DEFAULT_MODEL;
+
+  const pluginContext = enabledPlugins.length > 0
+    ? `\nModul aktif: ${enabledPlugins.join(', ')}. Prioritaskan topik yang relevan dengan modul ini dalam respons Anda.`
+    : '\nSemua modul nonaktif. Berikan respons umum saja.';
+
+  const systemPromptWithPlugins = SYSTEM_PROMPT + pluginContext;
 
   // Bangun history percakapan (maksimal 6 pesan terakhir untuk hemat token)
   const recentHistory = conversationHistory.slice(-6);
 
   const requestBody = {
     system_instruction: {
-      parts: [{ text: SYSTEM_PROMPT }],
+      parts: [{ text: systemPromptWithPlugins }],
     },
     contents: [
       ...recentHistory,
@@ -74,16 +84,23 @@ export const getGeminiResponse = async (
     // Handle rate limit gracefully - fallback ke mock
     if (res.status === 429) {
       console.warn('[HealthMate AI] Rate limit reached, switching to offline mode...');
-      return import('./mockAi').then(({ getMockResponse }) => getMockResponse(userPrompt));
+      return import('./mockAi').then(({ getMockResponse }) => getMockResponse(userPrompt, enabledPlugins));
     }
 
     // Handle model not found - fallback ke mock
     if (res.status === 404) {
       console.warn(`[HealthMate AI] Model "${model}" not found, switching to offline mode...`);
-      return import('./mockAi').then(({ getMockResponse }) => getMockResponse(userPrompt));
+      return import('./mockAi').then(({ getMockResponse }) => getMockResponse(userPrompt, enabledPlugins));
     }
 
-    throw new Error(`Gemini API Error (${res.status}): ${errMsg}`);
+    // Sanitize error message — jangan expose detail API ke UI
+    const safeMsg = res.status === 400
+      ? 'Permintaan tidak valid. Periksa konfigurasi API Anda.'
+      : res.status === 403
+      ? 'API key tidak valid atau tidak memiliki akses. Periksa di Pengaturan.'
+      : 'Terjadi kesalahan pada layanan AI. Silakan coba lagi.';
+
+    throw new Error(safeMsg);
   }
 
   const data = await res.json();

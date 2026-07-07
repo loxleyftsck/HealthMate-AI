@@ -288,28 +288,34 @@ export const Settings: React.FC = () => {
           </div>
         </Card>
 
-        <Card className="flex flex-col justify-between">
+        <Card className="flex flex-col justify-between opacity-70">
           <div className="space-y-4">
-            <div className="flex items-center gap-3">
-              <span className="p-2.5 rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
-                <Info className="w-5 h-5" />
-              </span>
-              <div>
-                <h3 className="text-sm font-bold font-display text-gray-900 dark:text-white">Pengaturan Bahasa</h3>
-                <p className="text-xs text-gray-455">Pilih bahasa tampilan aplikasi</p>
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <span className="p-2.5 rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+                  <Info className="w-5 h-5" />
+                </span>
+                <div>
+                  <h3 className="text-sm font-bold font-display text-gray-900 dark:text-white">Pengaturan Bahasa</h3>
+                  <p className="text-xs text-gray-455">Pilih bahasa tampilan aplikasi</p>
+                </div>
               </div>
+              <span className="shrink-0 text-[9px] font-bold px-2 py-1 rounded-full bg-amber-100 text-amber-700 dark:bg-amber-950/30 dark:text-amber-400 uppercase tracking-wide">
+                Coming Soon
+              </span>
             </div>
 
             <div className="space-y-2">
               <label className="text-xs font-semibold text-gray-400 block ml-1">Bahasa</label>
               <select
                 value={settings.language}
-                onChange={handleLanguageChange}
-                className="w-full px-4 py-2.5 rounded-2xl border border-gray-200 dark:border-slate-800 bg-gray-50/50 text-xs font-semibold text-gray-800 dark:text-gray-200 dark:bg-slate-900/50 outline-none h-[42px]"
+                disabled
+                className="w-full px-4 py-2.5 rounded-2xl border border-gray-200 dark:border-slate-800 bg-gray-50/50 text-xs font-semibold text-gray-800 dark:text-gray-200 dark:bg-slate-900/50 outline-none h-[42px] cursor-not-allowed"
               >
                 <option value="en">English (US)</option>
                 <option value="id">Bahasa Indonesia (ID)</option>
               </select>
+              <p className="text-[10px] text-gray-400 italic ml-1">Fitur multi-bahasa sedang dalam pengembangan.</p>
             </div>
           </div>
         </Card>
@@ -471,7 +477,6 @@ export const Settings: React.FC = () => {
                   <option value="gemini-2.5-pro">Gemini 2.5 Pro (Pintar &amp; Detail)</option>
                   <option value="gemini-2.0-flash">Gemini 2.0 Flash (Cepat)</option>
                   <option value="gemini-2.0-flash-lite">Gemini 2.0 Flash Lite (Paling Hemat)</option>
-                  <option value="gemini-3.5-flash">Gemini 3.5 Flash (Terbaru)</option>
                 </select>
               </div>
               <div className="col-span-1 md:col-span-2">

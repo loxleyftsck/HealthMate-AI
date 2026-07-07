@@ -75,6 +75,7 @@ export const Home: React.FC = () => {
   };
 
   const waterProgress = Math.round((metrics.waterIntake.current / metrics.waterIntake.goal) * 100);
+  const caloriesProgress = Math.round((metrics.calories.current / metrics.calories.goal) * 100);
 
   return (
     <motion.div
@@ -211,7 +212,7 @@ export const Home: React.FC = () => {
                 <div className="w-full h-2 rounded-full bg-gray-100 dark:bg-slate-800 overflow-hidden">
                   <div
                     className="h-full bg-amber-500 rounded-full transition-all duration-500"
-                    style={{ width: `${Math.min(waterProgress, 100)}%` }}
+                    style={{ width: `${Math.min(caloriesProgress, 100)}%` }}
                   />
                 </div>
               </div>

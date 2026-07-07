@@ -23,11 +23,23 @@ export const ChatBubble: React.FC<ChatBubbleProps> = ({
 
   const handleCopy = async () => {
     try {
-      await navigator.clipboard.writeText(message.text);
+      if (navigator.clipboard && document.hasFocus()) {
+        await navigator.clipboard.writeText(message.text);
+      } else {
+        // Fallback untuk browser yang memblokir clipboard API
+        const el = document.createElement('textarea');
+        el.value = message.text;
+        el.style.position = 'fixed';
+        el.style.opacity = '0';
+        document.body.appendChild(el);
+        el.select();
+        document.execCommand('copy');
+        document.body.removeChild(el);
+      }
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch (err) {
-      console.error('Failed to copy text: ', err);
+      console.warn('Copy not available:', err);
     }
   };
 

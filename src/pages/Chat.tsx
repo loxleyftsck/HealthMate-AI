@@ -142,9 +142,8 @@ export const Chat: React.FC = () => {
       updatedAt: new Date().toISOString(),
     };
 
-    // Update sessions database
-    const updatedSessions = sessions.map((s) => (s.id === activeSession.id ? updatedSession : s));
-    setSessions(updatedSessions);
+    // Update sessions database (functional update to avoid stale closure)
+    setSessions(prev => prev.map((s) => (s.id === activeSession.id ? updatedSession : s)));
     setActiveSession(updatedSession);
     setInputValue('');
     setAttachedFile(null);
@@ -181,8 +180,7 @@ export const Chat: React.FC = () => {
         updatedAt: new Date().toISOString(),
       };
 
-      const finalSessions = sessions.map((s) => (s.id === activeSession.id ? finalSession : s));
-      setSessions(finalSessions);
+      setSessions(prev => prev.map((s) => (s.id === activeSession.id ? finalSession : s)));
       setActiveSession(finalSession);
 
       // Dispatch custom event to notify sidebar
@@ -205,8 +203,7 @@ export const Chat: React.FC = () => {
       messages: [],
       updatedAt: new Date().toISOString(),
     };
-    const updatedSessions = sessions.map((s) => (s.id === activeSession.id ? updatedSession : s));
-    setSessions(updatedSessions);
+    setSessions(prev => prev.map((s) => (s.id === activeSession.id ? updatedSession : s)));
     setActiveSession(updatedSession);
   };
 
@@ -431,14 +428,19 @@ export const Chat: React.FC = () => {
         )}
 
         <div className="flex items-end gap-3">
-          {/* Mock File Upload Button */}
-          <button
-            onClick={triggerMockAttachment}
-            title="Lampirkan dokumen / gambar kesehatan"
-            className="p-3 rounded-2xl bg-white border border-gray-200/80 hover:bg-gray-50 hover:border-gray-350 dark:bg-slate-900 dark:border-slate-800 dark:hover:bg-slate-800 text-gray-500 dark:text-gray-400 shrink-0 transition-all duration-200 active:scale-95"
-          >
-            <Paperclip className="w-5 h-5" />
-          </button>
+          {/* File Upload Button (Demo) */}
+          <div className="relative group">
+            <button
+              onClick={triggerMockAttachment}
+              title="Lampirkan dokumen (Demo)"
+              className="p-3 rounded-2xl bg-white border border-gray-200/80 hover:bg-gray-50 dark:bg-slate-900 dark:border-slate-800 dark:hover:bg-slate-800 text-gray-400 dark:text-gray-500 shrink-0 transition-all duration-200 active:scale-95"
+            >
+              <Paperclip className="w-5 h-5" />
+            </button>
+            <span className="absolute -top-1.5 -right-1.5 text-[8px] font-bold bg-gray-400 text-white px-1 py-0.5 rounded-full leading-none pointer-events-none">
+              Demo
+            </span>
+          </div>
 
           {/* Prompt Entry Box */}
           <div className="flex-1 relative flex items-center bg-white dark:bg-slate-900 border border-gray-200/80 dark:border-slate-800 rounded-2xl shadow-sm focus-within:ring-2 focus-within:ring-emerald-500/20 focus-within:border-emerald-500 transition-all">
@@ -453,18 +455,21 @@ export const Chat: React.FC = () => {
               className="w-full pl-4 pr-12 py-3 rounded-2xl text-sm bg-transparent border-0 outline-none resize-none max-h-24 text-gray-800 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-505"
             />
 
-            {/* Microphone Button (Inside input right) */}
-            <button
-              onClick={toggleMockMicrophone}
-              title="Transkripsi suara (simulasi)"
-              className={`absolute right-3 p-1.5 rounded-xl transition-all duration-200 ${
-                isListening
-                  ? 'bg-rose-500 text-white animate-pulse'
-                  : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-800'
-              }`}
-            >
-              <Mic className="w-4 h-4" />
-            </button>
+            {/* Microphone Button — Demo simulation */}
+            <div className="absolute right-3 flex items-center gap-1">
+              <span className="text-[8px] font-bold text-gray-400 leading-none hidden sm:block">Demo</span>
+              <button
+                onClick={toggleMockMicrophone}
+                title="Transkripsi suara (Demo)"
+                className={`p-1.5 rounded-xl transition-all duration-200 ${
+                  isListening
+                    ? 'bg-rose-500 text-white animate-pulse'
+                    : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-800'
+                }`}
+              >
+                <Mic className="w-4 h-4" />
+              </button>
+            </div>
           </div>
 
           {/* Send Button */}

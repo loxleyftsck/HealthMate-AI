@@ -39,7 +39,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ onNewChat, isOpen = false, onC
     const loadSessions = () => {
       const saved = localStorage.getItem('healthmate-chat-sessions');
       if (saved) {
-        setSessions(JSON.parse(saved));
+        try {
+          setSessions(JSON.parse(saved));
+        } catch {
+          localStorage.removeItem('healthmate-chat-sessions');
+          setSessions(MOCK_CHAT_HISTORY);
+        }
       } else {
         localStorage.setItem('healthmate-chat-sessions', JSON.stringify(MOCK_CHAT_HISTORY));
         setSessions(MOCK_CHAT_HISTORY);

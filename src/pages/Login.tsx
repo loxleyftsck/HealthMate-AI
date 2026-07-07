@@ -23,13 +23,26 @@ export const Login: React.FC = () => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim()) {
+    const trimmedName = name.trim();
+    if (!trimmedName) {
       setError('Silakan masukkan nama Anda');
+      return;
+    }
+    if (trimmedName.length > 50) {
+      setError('Nama terlalu panjang (maksimal 50 karakter)');
       return;
     }
     const numWeight = parseFloat(weight) || 70;
     const numHeight = parseFloat(height) || 170;
-    login(name.trim(), selectedAvatar, numWeight, numHeight);
+    if (weight && (numWeight < 20 || numWeight > 300)) {
+      setError('Berat badan tidak valid (20–300 kg)');
+      return;
+    }
+    if (height && (numHeight < 100 || numHeight > 250)) {
+      setError('Tinggi badan tidak valid (100–250 cm)');
+      return;
+    }
+    login(trimmedName, selectedAvatar, numWeight, numHeight);
   };
 
   return (

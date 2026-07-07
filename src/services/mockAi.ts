@@ -1,6 +1,8 @@
-export const getMockResponse = (userPrompt: string): Promise<{ text: string; pluginUsed?: string }> => {
+export const getMockResponse = (userPrompt: string, enabledPlugins: string[] = []): Promise<{ text: string; pluginUsed?: string }> => {
+  const allPluginsEnabled = enabledPlugins.length === 0;
+  const hasPlugin = (name: string) => allPluginsEnabled || enabledPlugins.includes(name);
+
   return new Promise((resolve) => {
-    // Simulasi delay pengetikan alami (800ms - 1500ms)
     const delay = 800 + Math.random() * 700;
 
     setTimeout(() => {
@@ -8,14 +10,15 @@ export const getMockResponse = (userPrompt: string): Promise<{ text: string; plu
 
       // 1. Panduan Gejala (Symptom Checker)
       if (
-        prompt.includes('gejala') ||
+        hasPlugin('Symptom') &&
+        (prompt.includes('gejala') ||
         prompt.includes('demam') ||
         prompt.includes('batuk') ||
         prompt.includes('pusing') ||
         prompt.includes('sakit') ||
         prompt.includes('nyeri') ||
         prompt.includes('lambung') ||
-        prompt.includes('flu')
+        prompt.includes('flu'))
       ) {
         resolve({
           text: `### 🩺 Edukasi & Pemahaman Gejala Kesehatan
@@ -44,13 +47,14 @@ Terima kasih telah membagikan kondisi yang Anda rasakan. Memahami gejala awal ad
 
       // 2. Nutrisi & Pola Makan
       if (
-        prompt.includes('nutrisi') ||
+        hasPlugin('Nutrition') &&
+        (prompt.includes('nutrisi') ||
         prompt.includes('diet') ||
         prompt.includes('makan') ||
         prompt.includes('sehat') ||
         prompt.includes('kalori') ||
         prompt.includes('resep') ||
-        prompt.includes('protein')
+        prompt.includes('protein'))
       ) {
         resolve({
           text: `### 🍎 Nutrisi Seimbang & Pola Makan Sehat
@@ -77,13 +81,14 @@ Pola makan yang seimbang adalah pilar utama dari tubuh yang sehat. Memenuhi kebu
 
       // 3. Aktivitas Fisik (Workout)
       if (
-        prompt.includes('olahraga') ||
+        hasPlugin('Workout') &&
+        (prompt.includes('olahraga') ||
         prompt.includes('aktivitas') ||
         prompt.includes('gym') ||
         prompt.includes('lari') ||
         prompt.includes('cardio') ||
         prompt.includes('latihan') ||
-        prompt.includes('fitness')
+        prompt.includes('fitness'))
       ) {
         resolve({
           text: `### 🏃 Panduan Aktivitas Fisik & Olahraga
@@ -110,10 +115,11 @@ Melakukan aktivitas fisik secara konsisten sangat baik untuk kesehatan fisik mau
 
       // 4. Asupan Air & Hidrasi
       if (
-        prompt.includes('air') ||
+        hasPlugin('Water') &&
+        (prompt.includes('air') ||
         prompt.includes('minum') ||
         prompt.includes('hidrasi') ||
-        prompt.includes('dehidrasi')
+        prompt.includes('dehidrasi'))
       ) {
         resolve({
           text: `### 💧 Kebutuhan Hidrasi & Asupan Air Harian
@@ -138,12 +144,13 @@ Sekitar 60% tubuh manusia terdiri atas air. Memenuhi asupan cairan sangat pentin
 
       // 5. Pola Tidur & Istirahat
       if (
-        prompt.includes('tidur') ||
+        hasPlugin('Sleep') &&
+        (prompt.includes('tidur') ||
         prompt.includes('istirahat') ||
         prompt.includes('insomnia') ||
         prompt.includes('lelah') ||
         prompt.includes('malam') ||
-        prompt.includes('begadang')
+        prompt.includes('begadang'))
       ) {
         resolve({
           text: `### 😴 Kebiasaan Tidur Sehat (Sleep Hygiene)
@@ -169,10 +176,11 @@ Tidur berkualitas sama pentingnya dengan nutrisi seimbang dan olahraga teratur. 
 
       // 6. Indeks Massa Tubuh (BMI)
       if (
-        prompt.includes('bmi') ||
+        hasPlugin('BMI') &&
+        (prompt.includes('bmi') ||
         prompt.includes('indeks massa tubuh') ||
         prompt.includes('berat badan') ||
-        prompt.includes('tinggi badan')
+        prompt.includes('tinggi badan'))
       ) {
         resolve({
           text: `### 📈 Pemahaman Indeks Massa Tubuh (BMI)

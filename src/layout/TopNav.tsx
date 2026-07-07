@@ -17,7 +17,11 @@ export const TopNav: React.FC<TopNavProps> = ({ onMenuToggle }) => {
     const loadMetrics = () => {
       const saved = localStorage.getItem('healthmate-metrics');
       if (saved) {
-        setMetrics(JSON.parse(saved));
+        try {
+          setMetrics(JSON.parse(saved));
+        } catch {
+          localStorage.removeItem('healthmate-metrics');
+        }
       }
     };
     
