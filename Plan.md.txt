@@ -1,0 +1,479 @@
+# 🩺 HealthMate AI
+### AI Health Assistant powered by Gemini Flash
+
+---
+
+# 📖 Project Overview
+
+HealthMate AI adalah chatbot kesehatan berbasis AI yang membantu pengguna memperoleh edukasi kesehatan umum, rekomendasi gaya hidup sehat, serta berbagai alat pendukung seperti kalkulator BMI dan pelacak konsumsi air.
+
+Project ini menggunakan pendekatan **UI First Development**, sehingga seluruh antarmuka dan logika frontend dikembangkan terlebih dahulu sebelum mengintegrasikan Gemini Flash API.
+
+Project ini **bukan aplikasi diagnosis medis**, melainkan asisten edukasi kesehatan.
+
+---
+
+# 🎯 Objectives
+
+- Membuat chatbot AI menggunakan Gemini Flash
+- UI modern dan responsive
+- Penggunaan token API seminimal mungkin
+- Mudah dikembangkan melalui sistem plugin
+- Clean Architecture
+- Open Source Friendly
+
+---
+
+# 🛠 Technology Stack
+
+Frontend
+- React + Vite
+- Tailwind CSS
+- TypeScript
+- Framer Motion
+- Lucide Icons
+
+Backend
+- Node.js
+- Express
+
+AI
+- Gemini Flash API
+
+Storage
+- LocalStorage
+- (Future) Firebase
+
+---
+
+# 🎨 Design Style
+
+Inspirasi:
+
+- ChatGPT
+- Apple Health
+- Notion
+- Linear
+- Google Gemini
+
+Color Palette
+
+Primary
+- Emerald Green
+
+Secondary
+- White
+
+Accent
+- Soft Gray
+
+Border Radius
+- XL Rounded
+
+Shadow
+- Soft Glassmorphism
+
+Animation
+- Smooth Fade
+- Typing Indicator
+- Slide Transition
+
+---
+
+# 📦 Folder Structure
+
+```
+healthmate-ai/
+
+src/
+
+components/
+
+pages/
+
+layouts/
+
+hooks/
+
+plugins/
+
+services/
+
+utils/
+
+types/
+
+assets/
+
+public/
+
+server/
+
+README.md
+
+PLAN.md
+```
+
+---
+
+# 🚀 Development Roadmap
+
+## Phase 1 — UI Foundation
+
+Goal
+
+Membuat seluruh tampilan aplikasi tanpa AI.
+
+Task
+
+- Splash Screen
+- Sidebar
+- Chat Layout
+- Header
+- Footer
+- Chat Bubble
+- Typing Indicator
+- Responsive Design
+- Dark Mode
+- Loading Animation
+
+Deliverable
+
+UI yang terlihat seperti aplikasi production.
+
+---
+
+## Phase 2 — Frontend Logic
+
+Goal
+
+Semua fitur berjalan menggunakan data dummy.
+
+Task
+
+- Fake AI Response
+- Chat History
+- LocalStorage
+- Auto Scroll
+- Copy Message
+- Delete Chat
+- New Chat
+- Prompt Suggestions
+
+Deliverable
+
+Aplikasi terasa hidup walaupun belum menggunakan AI.
+
+---
+
+## Phase 3 — Health Utilities
+
+Plugin pertama dibuat secara lokal.
+
+### BMI Calculator
+
+Input
+
+- Height
+- Weight
+
+Output
+
+- BMI
+- Category
+- Recommendation
+
+---
+
+### Water Tracker
+
+Input
+
+- Daily Goal
+
+Output
+
+- Progress
+
+---
+
+### Sleep Recommendation
+
+Input
+
+- Sleep Time
+
+Output
+
+- Recommendation
+
+---
+
+### Workout Recommendation
+
+Input
+
+- Goal
+
+Output
+
+- Exercise Plan
+
+---
+
+### Nutrition Recommendation
+
+Input
+
+- Goal
+
+Output
+
+- Meal Suggestion
+
+---
+
+# 🤖 AI Integration
+
+Integrasi dilakukan terakhir.
+
+Flow
+
+```
+Frontend
+
+↓
+
+Express Server
+
+↓
+
+Gemini Flash API
+
+↓
+
+Response
+
+↓
+
+Frontend
+```
+
+---
+
+# 🧠 AI Personality
+
+Default Personality
+
+Professional Health Assistant
+
+Rules
+
+- Tidak memberikan diagnosis pasti.
+- Selalu menyertakan disclaimer.
+- Memberikan edukasi kesehatan.
+- Menggunakan bahasa Indonesia.
+- Ramah.
+- Mudah dipahami.
+
+---
+
+# 🔌 Plugin System
+
+Folder
+
+```
+plugins/
+
+BMI/
+
+Nutrition/
+
+Workout/
+
+Sleep/
+
+Water/
+
+SymptomChecker/
+```
+
+Setiap plugin memiliki struktur
+
+```
+plugin.json
+
+index.ts
+
+icon.svg
+```
+
+Plugin dapat diaktifkan atau dinonaktifkan dari Settings.
+
+Future:
+
+Plugin Marketplace.
+
+---
+
+# 📌 Features
+
+## Core Features
+
+- AI Chat
+- Chat History
+- Prompt Suggestions
+- Typing Animation
+- Markdown Support
+- Responsive UI
+- Dark Mode
+
+---
+
+## Health Features
+
+- Symptom Checker
+- BMI Calculator
+- Water Intake
+- Sleep Recommendation
+- Nutrition Planner
+- Workout Planner
+
+---
+
+## Productivity
+
+- Search History
+- Favorite Chat
+- Export Chat
+- Copy Message
+
+---
+
+## Future Features
+
+- Voice Chat
+- Image Upload
+- OCR Prescription
+- Firebase Authentication
+- Cloud Chat History
+- Push Notification
+- Plugin Marketplace
+
+---
+
+# 🎨 UI Pages
+
+## Landing
+
+- Logo
+- Description
+- Start Chat
+
+---
+
+## Chat
+
+Sidebar
+
+- New Chat
+- History
+- Plugins
+
+Main
+
+- Conversation
+- Prompt Suggestions
+- Input
+
+---
+
+## Settings
+
+- Theme
+- Plugin
+- About
+- Gemini Configuration
+
+---
+
+## Dashboard
+
+- BMI
+- Water Intake
+- Calories
+- Activity
+
+---
+
+# 📋 Development Order
+
+✅ UI
+
+↓
+
+✅ Animation
+
+↓
+
+✅ Fake Chat
+
+↓
+
+✅ Local Storage
+
+↓
+
+✅ Plugin System
+
+↓
+
+✅ Gemini Integration
+
+↓
+
+✅ Testing
+
+↓
+
+✅ Deployment
+
+---
+
+# ⚡ API Optimization
+
+Untuk menghemat penggunaan Gemini Flash API:
+
+- Tidak memanggil AI saat aplikasi dibuka.
+- Quick Prompt menggunakan template lokal jika memungkinkan.
+- Chat history disimpan di LocalStorage.
+- Utility seperti BMI dihitung secara lokal.
+- Hanya pesan yang benar-benar membutuhkan AI yang dikirim ke Gemini.
+
+---
+
+# 📚 Disclaimer
+
+HealthMate AI hanya memberikan informasi kesehatan umum.
+
+Aplikasi ini tidak menggantikan konsultasi dengan tenaga medis profesional dan tidak memberikan diagnosis penyakit.
+
+---
+
+# ✅ MVP Checklist
+
+- [ ] Modern UI
+- [ ] Responsive
+- [ ] Sidebar
+- [ ] Chat Bubble
+- [ ] Typing Indicator
+- [ ] Dummy Chat
+- [ ] Local Storage
+- [ ] Dark Mode
+- [ ] Plugin Panel
+- [ ] BMI Calculator
+- [ ] Water Tracker
+- [ ] Prompt Suggestions
+- [ ] Gemini Flash Integration
+- [ ] Deployment
+- [ ] README Documentation

@@ -1,0 +1,8 @@
+{
+  "id": "Water",
+  "name": "Hydration Assistant",
+  "version": "1.0.0",
+  "description": "Track daily water intake, set hydration goals, and get hydration reminders.",
+  "author": "HealthMate Team",
+  "enabledByDefault": true
+}

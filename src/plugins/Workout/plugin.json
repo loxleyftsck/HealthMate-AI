@@ -1,0 +1,8 @@
+{
+  "id": "Workout",
+  "name": "Workout Recommender",
+  "version": "1.0.0",
+  "description": "Receive exercise plans, daily workout splits, and active lifestyle tips.",
+  "author": "HealthMate Team",
+  "enabledByDefault": true
+}

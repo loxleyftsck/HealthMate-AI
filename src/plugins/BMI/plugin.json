@@ -1,0 +1,8 @@
+{
+  "id": "BMI",
+  "name": "BMI Calculator",
+  "version": "1.0.0",
+  "description": "Calculate Body Mass Index and receive weight-related lifestyle guidance.",
+  "author": "HealthMate Team",
+  "enabledByDefault": true
+}
