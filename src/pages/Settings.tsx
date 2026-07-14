@@ -18,6 +18,7 @@ import { Input } from '../components/Input';
 import { Textarea } from '../components/Textarea';
 import { useLocalStorage } from '../hooks/useLocalStorage';
 import { useTheme } from '../hooks/useTheme';
+import { useLanguage } from '../hooks/useLanguage';
 import type { AppSettings, UserProfile } from '../types';
 import { INITIAL_SETTINGS, MOCK_PLUGINS } from '../services/mockData';
 import { useAuth } from '../context/AuthContext';
@@ -26,6 +27,7 @@ import { Avatar } from '../components/Avatar';
 
 export const Settings: React.FC = () => {
   const { theme: activeTheme, setTheme } = useTheme();
+  const { t } = useLanguage();
   
   const navigate = useNavigate();
   const { user: profile, updateProfile, logout } = useAuth();
@@ -69,7 +71,7 @@ export const Settings: React.FC = () => {
       window.dispatchEvent(new Event('metrics-updated'));
     }
 
-    showSuccessMessage('Profil berhasil disimpan!');
+    showSuccessMessage(t.profileSaved);
   };
 
   const handleSaveGeminiConfig = (e: React.FormEvent) => {
@@ -82,7 +84,9 @@ export const Settings: React.FC = () => {
       temperature: parseFloat(temperature) || 0.7,
     };
     setSettings(updatedSettings);
-    showSuccessMessage('Konfigurasi API Gemini berhasil disimpan!');
+    window.dispatchEvent(new Event('settings-updated'));
+    const msg = settings.language === 'en' ? 'Gemini API configuration saved successfully!' : 'Konfigurasi API Gemini berhasil disimpan!';
+    showSuccessMessage(msg);
   };
 
   const handleTogglePlugin = (pluginId: string) => {
@@ -94,14 +98,21 @@ export const Settings: React.FC = () => {
       ...settings,
       plugins: updatedPlugins,
     });
+    window.dispatchEvent(new Event('settings-updated'));
   };
 
   const handleLanguageChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    setSettings({
+    const newLang = e.target.value as 'en' | 'id';
+    const updatedSettings = {
       ...settings,
-      language: e.target.value as 'en' | 'id',
-    });
-    showSuccessMessage(`Bahasa berhasil diubah menjadi ${e.target.value === 'en' ? 'Inggris' : 'Bahasa Indonesia'}`);
+      language: newLang,
+    };
+    setSettings(updatedSettings);
+    window.dispatchEvent(new Event('settings-updated'));
+    
+    const langName = newLang === 'en' ? 'English' : 'Bahasa Indonesia';
+    const msg = newLang === 'en' ? `Language changed successfully to ${langName}` : `Bahasa berhasil diubah menjadi ${langName}`;
+    showSuccessMessage(msg);
   };
 
   const showSuccessMessage = (msg: string) => {
@@ -135,9 +146,7 @@ export const Settings: React.FC = () => {
           <span>✓</span>
           <span>{savedFeedback}</span>
         </div>
-      )}
-
-      {/* 1. PERSONAL PROFILE SECTION */}
+      )}      {/* 1. PERSONAL PROFILE SECTION */}
       <motion.div variants={itemVariants}>
         <Card>
           <div className="flex items-center gap-3 mb-6">
@@ -145,8 +154,8 @@ export const Settings: React.FC = () => {
               <User className="w-5 h-5" />
             </span>
             <div>
-              <h3 className="text-lg font-bold font-display text-gray-900 dark:text-white">Profil Pengguna</h3>
-              <p className="text-xs text-gray-400 dark:text-gray-500">Kelola data profil dan target kebugaran harian Anda</p>
+              <h3 className="text-lg font-bold font-display text-gray-900 dark:text-white">{t.userProfile}</h3>
+              <p className="text-xs text-gray-400 dark:text-gray-500">{t.manageProfileDesc}</p>
             </div>
           </div>
 
@@ -155,7 +164,7 @@ export const Settings: React.FC = () => {
               {/* Left: Current Avatar Display & Selector */}
               <div className="flex flex-col items-center gap-3 shrink-0">
                 <span className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                  Avatar Aktif
+                  {t.activeAvatar}
                 </span>
                 <Avatar src={avatar} name={name} size="xl" className="shadow-md border border-gray-100 dark:border-slate-800" />
               </div>
@@ -163,7 +172,7 @@ export const Settings: React.FC = () => {
               {/* Right: Input Name */}
               <div className="flex-1 w-full">
                 <Input
-                  label="Nama Lengkap"
+                  label={t.fullName}
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   required
@@ -174,7 +183,7 @@ export const Settings: React.FC = () => {
             {/* Avatar Picker Presets */}
             <div>
               <label className="block text-xs font-bold text-gray-600 dark:text-gray-400 uppercase tracking-wider mb-2">
-                Ubah Avatar Profil
+                {t.changeAvatar}
               </label>
               <div className="flex flex-wrap gap-3">
                 {[
@@ -211,7 +220,7 @@ export const Settings: React.FC = () => {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <Input
-                label="Target Air Harian (ml)"
+                label={t.dailyWaterGoal}
                 type="number"
                 min="500"
                 max="10000"
@@ -220,7 +229,7 @@ export const Settings: React.FC = () => {
                 required
               />
               <Input
-                label="Target Kalori Harian (kcal)"
+                label={t.dailyCalorieGoal}
                 type="number"
                 min="1000"
                 max="6000"
@@ -237,12 +246,12 @@ export const Settings: React.FC = () => {
                   logout();
                   navigate('/');
                 }}
-                className="px-4 py-2.5 rounded-2xl bg-rose-50 hover:bg-rose-100 text-rose-600 dark:bg-rose-950/20 dark:hover:bg-rose-950/35 dark:text-rose-400 font-bold text-sm transition-all duration-200"
+                className="px-4 py-2.5 rounded-2xl bg-rose-50 hover:bg-rose-100 text-rose-600 dark:bg-rose-955/20 dark:hover:bg-rose-955/35 dark:text-rose-400 font-bold text-sm transition-all duration-200"
               >
-                Keluar Akun
+                {t.exitAccount}
               </button>
               <Button type="submit" className="px-5 rounded-2xl">
-                Simpan Profil
+                {t.saveProfile}
               </Button>
             </div>
           </form>
@@ -258,37 +267,37 @@ export const Settings: React.FC = () => {
                 <Sliders className="w-5 h-5" />
               </span>
               <div>
-                <h3 className="text-sm font-bold font-display text-gray-900 dark:text-white">Tema Aplikasi</h3>
-                <p className="text-xs text-gray-450">Pilih tampilan antarmuka visual aplikasi</p>
+                <h3 className="text-sm font-bold font-display text-gray-900 dark:text-white">{t.appTheme}</h3>
+                <p className="text-xs text-gray-455">{t.chooseThemeDesc}</p>
               </div>
             </div>
 
             <div className="grid grid-cols-3 gap-3">
               {[
-                { type: 'light', icon: <Sun className="w-4 h-4 mb-1" />, label: 'Terang' },
-                { type: 'dark', icon: <Moon className="w-4 h-4 mb-1" />, label: 'Gelap' },
-                { type: 'system', icon: <Laptop className="w-4 h-4 mb-1" />, label: 'Sistem' },
-              ].map((t) => (
+                { type: 'light', icon: <Sun className="w-4 h-4 mb-1" />, label: t.lightMode },
+                { type: 'dark', icon: <Moon className="w-4 h-4 mb-1" />, label: t.darkMode },
+                { type: 'system', icon: <Laptop className="w-4 h-4 mb-1" />, label: t.systemMode },
+              ].map((themeBtn) => (
                 <button
-                  key={t.type}
-                  onClick={() => setTheme(t.type as any)}
+                  key={themeBtn.type}
+                  onClick={() => setTheme(themeBtn.type as any)}
                   className={`flex flex-col items-center justify-center p-3 rounded-2xl border transition-all duration-200
                     ${
-                      activeTheme === t.type
+                      activeTheme === themeBtn.type
                         ? 'border-emerald-500 bg-emerald-50/20 text-emerald-600 dark:text-emerald-455 font-bold shadow-sm shadow-emerald-500/5'
                         : 'border-gray-100 dark:border-slate-800 bg-transparent text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-slate-800/40'
                     }
                   `}
                 >
-                  {t.icon}
-                  <span className="text-xs">{t.label}</span>
+                  {themeBtn.icon}
+                  <span className="text-xs">{themeBtn.label}</span>
                 </button>
               ))}
             </div>
           </div>
         </Card>
 
-        <Card className="flex flex-col justify-between opacity-70">
+        <Card className="flex flex-col justify-between">
           <div className="space-y-4">
             <div className="flex items-center justify-between gap-3">
               <div className="flex items-center gap-3">
@@ -296,26 +305,22 @@ export const Settings: React.FC = () => {
                   <Info className="w-5 h-5" />
                 </span>
                 <div>
-                  <h3 className="text-sm font-bold font-display text-gray-900 dark:text-white">Pengaturan Bahasa</h3>
-                  <p className="text-xs text-gray-455">Pilih bahasa tampilan aplikasi</p>
+                  <h3 className="text-sm font-bold font-display text-gray-900 dark:text-white">{t.languageSettings}</h3>
+                  <p className="text-xs text-gray-455">{t.chooseLanguageDesc}</p>
                 </div>
               </div>
-              <span className="shrink-0 text-[9px] font-bold px-2 py-1 rounded-full bg-amber-100 text-amber-700 dark:bg-amber-950/30 dark:text-amber-400 uppercase tracking-wide">
-                Coming Soon
-              </span>
             </div>
 
             <div className="space-y-2">
-              <label className="text-xs font-semibold text-gray-400 block ml-1">Bahasa</label>
+              <label className="text-xs font-semibold text-gray-400 block ml-1">{t.language}</label>
               <select
                 value={settings.language}
-                disabled
-                className="w-full px-4 py-2.5 rounded-2xl border border-gray-200 dark:border-slate-800 bg-gray-50/50 text-xs font-semibold text-gray-800 dark:text-gray-200 dark:bg-slate-900/50 outline-none h-[42px] cursor-not-allowed"
+                onChange={handleLanguageChange}
+                className="w-full px-4 py-2.5 rounded-2xl border border-gray-200 dark:border-slate-800 bg-gray-50/50 text-xs font-semibold text-gray-800 dark:text-gray-200 dark:bg-slate-900/50 outline-none h-[42px] cursor-pointer"
               >
                 <option value="en">English (US)</option>
                 <option value="id">Bahasa Indonesia (ID)</option>
               </select>
-              <p className="text-[10px] text-gray-400 italic ml-1">Fitur multi-bahasa sedang dalam pengembangan.</p>
             </div>
           </div>
         </Card>
@@ -329,8 +334,8 @@ export const Settings: React.FC = () => {
               <Cpu className="w-5 h-5" />
             </span>
             <div>
-              <h3 className="text-lg font-bold font-display text-gray-900 dark:text-white">Pengelola Fitur</h3>
-              <p className="text-xs text-gray-400 dark:text-gray-500">Aktifkan atau nonaktifkan fitur modul lokal dalam konsultasi</p>
+              <h3 className="text-lg font-bold font-display text-gray-900 dark:text-white">{t.featureManager}</h3>
+              <p className="text-xs text-gray-400 dark:text-gray-500">{t.togglePluginsDesc}</p>
             </div>
           </div>
 
@@ -342,17 +347,17 @@ export const Settings: React.FC = () => {
               let localizedName = plugin.name;
               let localizedDesc = plugin.description;
               if (plugin.id === 'symptomChecker') {
-                localizedName = 'Pemeriksa Gejala';
-                localizedDesc = 'Menganalisis indikator tubuh dan memberikan edukasi kemungkinan penyebab gejala.';
+                localizedName = t.pluginSymptomName;
+                localizedDesc = t.pluginSymptomDesc;
               } else if (plugin.id === 'nutritionAdvice') {
-                localizedName = 'Saran Nutrisi';
-                localizedDesc = 'Memberikan informasi kalori seimbang dan saran asupan gizi harian.';
+                localizedName = t.pluginNutritionName;
+                localizedDesc = t.pluginNutritionDesc;
               } else if (plugin.id === 'workoutSplit') {
-                localizedName = 'Pembagian Latihan';
-                localizedDesc = 'Merekomendasikan latihan fisik yang dipersonalisasi sesuai kebutuhan.';
+                localizedName = t.pluginWorkoutName;
+                localizedDesc = t.pluginWorkoutDesc;
               } else if (plugin.id === 'lifestyleTips') {
-                localizedName = 'Tips Gaya Hidup';
-                localizedDesc = 'Edukasi cara mengelola tingkat stres, kualitas tidur, dan pola hidup sehat.';
+                localizedName = t.pluginLifestyleName;
+                localizedDesc = t.pluginLifestyleDesc;
               }
 
               return (
@@ -362,7 +367,7 @@ export const Settings: React.FC = () => {
                     ${
                       isEnabled
                         ? 'border-emerald-250 bg-emerald-50/5 dark:border-slate-800/80 dark:bg-slate-900/30'
-                        : 'border-gray-100 bg-gray-50/20 dark:border-slate-850 dark:bg-slate-950/20 opacity-70'
+                        : 'border-gray-100 bg-gray-50/20 dark:border-slate-850 dark:bg-slate-955/20 opacity-70'
                     }
                   `}
                 >
@@ -380,7 +385,7 @@ export const Settings: React.FC = () => {
                   <button
                     onClick={() => handleTogglePlugin(plugin.id)}
                     className="text-gray-400 hover:text-emerald-500 transition-colors duration-150 shrink-0"
-                    title={isEnabled ? 'Nonaktifkan modul' : 'Aktifkan modul'}
+                    title={isEnabled ? (settings.language === 'en' ? 'Disable module' : 'Nonaktifkan modul') : (settings.language === 'en' ? 'Enable module' : 'Aktifkan modul')}
                   >
                     {isEnabled ? (
                       <ToggleRight className="w-10 h-6 text-emerald-550 shrink-0" />
@@ -399,39 +404,39 @@ export const Settings: React.FC = () => {
       <motion.div variants={itemVariants}>
         <Card className="border-rose-100 dark:border-rose-900/30">
           <div className="flex items-center gap-3 mb-6">
-            <span className="p-2.5 rounded-2xl bg-rose-500/10 text-rose-600 dark:text-rose-400">
+            <span className="p-2.5 rounded-2xl bg-rose-500/10 text-rose-600 dark:text-rose-455">
               <ShieldAlert className="w-5 h-5" />
             </span>
             <div>
-              <h3 className="text-lg font-bold font-display text-gray-900 dark:text-white">Manajemen Data & Riwayat</h3>
-              <p className="text-xs text-gray-400 dark:text-gray-500">Kelola atau hapus semua data aktivitas dan riwayat pesan Anda</p>
+              <h3 className="text-lg font-bold font-display text-gray-900 dark:text-white">{t.dataManagement}</h3>
+              <p className="text-xs text-gray-400 dark:text-gray-500">{t.manageDataDesc}</p>
             </div>
           </div>
 
           <div className="flex flex-col sm:flex-row gap-4">
             <button
               onClick={() => {
-                if (confirm('Apakah Anda yakin ingin menghapus semua riwayat konsultasi? Tindakan ini tidak dapat dibatalkan.')) {
+                if (confirm(t.confirmClearChat)) {
                   localStorage.removeItem('healthmate-chat-sessions');
                   window.dispatchEvent(new Event('chat-sessions-updated'));
-                  showSuccessMessage('Semua riwayat konsultasi berhasil dihapus!');
+                  showSuccessMessage(t.chatCleared);
                 }
               }}
               className="flex-1 px-4 py-3 rounded-2xl border border-rose-200 dark:border-rose-900/40 text-rose-600 dark:text-rose-400 bg-rose-50/20 hover:bg-rose-50/50 dark:hover:bg-rose-955/20 text-xs font-bold transition-all duration-200"
             >
-              Hapus Semua Riwayat Konsultasi
+              {t.clearChatHistory}
             </button>
             <button
               onClick={() => {
-                if (confirm('Apakah Anda yakin ingin mereset seluruh data kesehatan Anda kembali ke awal?')) {
+                if (confirm(t.confirmResetData)) {
                   localStorage.removeItem('healthmate-metrics');
                   window.dispatchEvent(new Event('metrics-updated'));
-                  showSuccessMessage('Seluruh data kesehatan berhasil direset!');
+                  showSuccessMessage(t.dataReset);
                 }
               }}
               className="flex-1 px-4 py-3 rounded-2xl border border-gray-200 dark:border-slate-800 text-gray-700 dark:text-gray-300 bg-gray-50/20 hover:bg-gray-50/60 dark:hover:bg-slate-800/40 text-xs font-bold transition-all duration-200"
             >
-              Reset Data Kesehatan & Metrik
+              {t.resetHealthData}
             </button>
           </div>
         </Card>
@@ -445,29 +450,37 @@ export const Settings: React.FC = () => {
               <Cpu className="w-5 h-5 animate-pulse" />
             </span>
             <div>
-              <h3 className="text-lg font-bold font-display text-gray-900 dark:text-white">Konfigurasi API Gemini</h3>
-              <p className="text-xs text-gray-400 dark:text-gray-500">Masukkan API key dari Google AI Studio untuk mengaktifkan AI nyata</p>
+              <h3 className="text-lg font-bold font-display text-gray-900 dark:text-white">{t.geminiConfigTitle}</h3>
+              <p className="text-xs text-gray-400 dark:text-gray-500">{t.geminiConfigDesc}</p>
             </div>
           </div>
 
-          <div className="p-3 mb-6 flex gap-3 border border-emerald-100 bg-emerald-50/15 rounded-2xl text-xs text-emerald-700 dark:border-emerald-950/20 dark:bg-emerald-950/5 dark:text-emerald-400">
+          <div className="p-3 mb-6 flex gap-3 border border-emerald-100 bg-emerald-50/15 rounded-2xl text-xs text-emerald-700 dark:border-emerald-950/20 dark:bg-emerald-955/5 dark:text-emerald-400">
             <Info className="w-4 h-4 shrink-0 mt-0.5" />
             <p className="leading-relaxed">
-              <strong>Dapatkan API Key gratis</strong> di <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" className="underline hover:no-underline">aistudio.google.com</a>. Tanpa API key, aplikasi akan menggunakan mode offline (respons lokal).
+              {settings.language === 'en' ? (
+                <>
+                  <strong>Get a free API Key</strong> at <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" className="underline hover:no-underline">aistudio.google.com</a>. Without an API key, the app runs in offline mode (local responses).
+                </>
+              ) : (
+                <>
+                  <strong>Dapatkan API Key gratis</strong> di <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" className="underline hover:no-underline">aistudio.google.com</a>. Tanpa API key, aplikasi akan menggunakan mode offline (respons lokal).
+                </>
+              )}
             </p>
           </div>
 
           <form onSubmit={handleSaveGeminiConfig} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <Input
-                label="Kunci API Gemini (Gemini API Key)"
+                label={t.geminiApiKey}
                 placeholder="AIzaSy..."
                 type="password"
                 value={apiKey}
                 onChange={(e) => setApiKey(e.target.value)}
               />
               <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-semibold text-gray-500 dark:text-gray-450 ml-1">Model Gemini</label>
+                <label className="text-xs font-semibold text-gray-500 dark:text-gray-450 ml-1">{t.geminiModel}</label>
                 <select
                   value={model}
                   onChange={(e) => setModel(e.target.value)}
@@ -481,7 +494,7 @@ export const Settings: React.FC = () => {
               </div>
               <div className="col-span-1 md:col-span-2">
                 <Input
-                  label="Temperatur (0.0 = Presisi, 1.0 = Kreatif)"
+                  label={t.temperature}
                   type="number"
                   min="0"
                   max="1"
@@ -492,7 +505,7 @@ export const Settings: React.FC = () => {
               </div>
               <div className="col-span-1 md:col-span-2">
                 <Textarea
-                  label="Instruksi Sistem (System Instructions)"
+                  label={t.systemInstruction}
                   rows={3}
                   value={systemInstruction}
                   onChange={(e) => setSystemInstruction(e.target.value)}
@@ -501,7 +514,7 @@ export const Settings: React.FC = () => {
             </div>
             <div className="flex justify-end">
               <Button type="submit" className="px-5 rounded-2xl">
-                Simpan Konfigurasi
+                {t.saveConfiguration}
               </Button>
             </div>
           </form>
@@ -510,26 +523,26 @@ export const Settings: React.FC = () => {
 
       {/* 5. ABOUT & MEDICAL DISCLAIMER */}
       <motion.div variants={itemVariants}>
-        <Card className="border-rose-100 bg-rose-50/5 dark:border-rose-950/20">
+        <Card className="border-rose-100 bg-rose-50/5 dark:border-rose-955/20">
           <div className="flex items-center gap-3 mb-4">
             <span className="p-2.5 rounded-2xl bg-rose-500/10 text-rose-600 dark:text-rose-455">
               <ShieldAlert className="w-5 h-5 animate-pulse" />
             </span>
             <div>
-              <h3 className="text-lg font-bold font-display text-rose-800 dark:text-rose-450">Penafian Penting & Batasan Tanggung Jawab</h3>
-              <p className="text-xs text-rose-600/80 dark:text-rose-550/80">Batasan hukum medis dan ketentuan penggunaan aplikasi</p>
+              <h3 className="text-lg font-bold font-display text-rose-800 dark:text-rose-450">{t.disclaimerTitle}</h3>
+              <p className="text-xs text-rose-600/80 dark:text-rose-550/80">{t.disclaimerSubtitle}</p>
             </div>
           </div>
 
           <div className="text-xs leading-relaxed text-gray-550 dark:text-gray-400 space-y-3">
             <p>
-              HealthMate AI dirancang sebagai sarana edukasi, pendukung pola hidup sehat, dan asisten konsultasi berbasis simulasi. Seluruh informasi yang dihasilkan oleh aplikasi ini bertujuan memberikan panduan edukasi kesehatan secara umum.
+              {t.disclaimerParagraph1}
             </p>
             <p className="font-bold text-rose-700 dark:text-rose-400 bg-rose-50/50 dark:bg-rose-950/10 p-3.5 rounded-xl border border-rose-100/50 dark:border-rose-950/30">
-              Aplikasi ini BUKAN merupakan alat diagnosis medis. Informasi yang diberikan tidak menggantikan konsultasi langsung, pemeriksaan klinis, diagnosis, maupun pengobatan oleh dokter atau tenaga kesehatan profesional.
+              {t.disclaimerParagraph2}
             </p>
             <p>
-              Jika Anda mengalami gejala darurat, nyeri hebat, kondisi kronis memburuk, atau kesulitan bernapas, segera hubungi layanan panggilan darurat medis atau kunjungi fasilitas kesehatan atau rumah sakit terdekat.
+              {t.disclaimerParagraph3}
             </p>
           </div>
         </Card>

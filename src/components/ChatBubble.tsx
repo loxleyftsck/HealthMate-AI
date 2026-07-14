@@ -82,7 +82,9 @@ export const ChatBubble: React.FC<ChatBubbleProps> = ({
         <div
           className={`relative rounded-2xl px-4 py-3 text-sm shadow-sm border
             ${
-              isAI
+              message.isEmergency
+                ? 'bg-rose-50 border-rose-200 text-rose-800 dark:bg-rose-950/20 dark:border-rose-900/40 dark:text-rose-200'
+                : isAI
                 ? 'bg-white border-gray-100 text-gray-800 dark:bg-slate-900 dark:border-slate-800 dark:text-gray-100'
                 : 'bg-emerald-600 border-emerald-600 text-white dark:bg-emerald-600 dark:border-emerald-600'
             }

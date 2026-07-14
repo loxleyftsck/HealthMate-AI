@@ -17,20 +17,22 @@ import type { HealthMetricSummary } from '../types';
 import { INITIAL_DASHBOARD_DATA } from '../services/mockData';
 import { useHealthCompanion } from '../context/HealthCompanionContext';
 import { useAuth } from '../context/AuthContext';
+import { useLanguage } from '../hooks/useLanguage';
 
 export const Home: React.FC = () => {
   const navigate = useNavigate();
   const { speak } = useHealthCompanion();
   const { user: profile } = useAuth();
+  const { language, t } = useLanguage();
   const [metrics, setMetrics] = useLocalStorage<HealthMetricSummary>('healthmate-metrics', INITIAL_DASHBOARD_DATA);
-  const [greeting, setGreeting] = useState('Selamat datang kembali');
+  const [greetingKey, setGreetingKey] = useState<'goodMorning' | 'goodDay' | 'goodAfternoon' | 'goodEvening' | 'welcomeBack'>('welcomeBack');
 
   useEffect(() => {
     const hour = new Date().getHours();
-    if (hour < 11) setGreeting('Selamat pagi');
-    else if (hour < 15) setGreeting('Selamat siang');
-    else if (hour < 18) setGreeting('Selamat sore');
-    else setGreeting('Selamat malam');
+    if (hour < 11) setGreetingKey('goodMorning');
+    else if (hour < 15) setGreetingKey('goodDay');
+    else if (hour < 18) setGreetingKey('goodAfternoon');
+    else setGreetingKey('goodEvening');
   }, []);
 
   const handleAddWater = () => {
@@ -52,9 +54,9 @@ export const Home: React.FC = () => {
     setMetrics(updated);
 
     if (isGoalMetNow) {
-      speak('Luar biasa! Target asupan air minum Anda hari ini telah tercapai.', 'success', 6000);
+      speak(t.waterGoalReached, 'success', 6000);
     } else {
-      speak('Air minum berhasil dicatat. Jaga selalu hidrasi tubuh Anda!', 'success', 4000);
+      speak(t.waterLogged, 'success', 4000);
     }
 
     // Dispatch custom event to notify TopNav
@@ -90,13 +92,13 @@ export const Home: React.FC = () => {
           <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
             <div className="space-y-2">
               <span className="text-xs font-semibold uppercase tracking-widest text-emerald-100/80 font-display">
-                Asisten Kesehatan Pribadi
+                {t.personalAssistant}
               </span>
               <h2 className="text-2xl md:text-3xl font-extrabold font-display leading-tight">
-                {greeting}, {profile.name}!
+                {t[greetingKey]}, {profile.name}!
               </h2>
               <p className="text-emerald-50/90 text-sm max-w-xl leading-relaxed">
-                HealthMate AI telah mengumpulkan ringkasan aktivitas kesehatan Anda hari ini. Anda telah mencatat {metrics.waterIntake.current} ml air minum dan melakukan aktivitas fisik selama {metrics.exercise.duration} menit.
+                {t.summaryText(metrics.waterIntake.current, metrics.exercise.duration)}
               </p>
             </div>
             <Button
@@ -105,7 +107,7 @@ export const Home: React.FC = () => {
               className="w-fit bg-white hover:bg-emerald-50 text-emerald-700 font-bold"
               rightIcon={<ArrowRight className="w-4 h-4" />}
             >
-              Mulai Konsultasi AI
+              {t.startAiConsultation}
             </Button>
           </div>
 
@@ -126,7 +128,7 @@ export const Home: React.FC = () => {
                   <span className="p-2 rounded-xl bg-emerald-50 dark:bg-emerald-950/20 text-emerald-600 dark:text-emerald-400">
                     <Activity className="w-5 h-5" />
                   </span>
-                  <span className="font-semibold text-sm text-gray-500 dark:text-gray-400">Indeks Massa Tubuh</span>
+                  <span className="font-semibold text-sm text-gray-500 dark:text-gray-400">{t.bmiTitle}</span>
                 </div>
                 <Award className="w-5 h-5 text-amber-500" />
               </div>
@@ -135,17 +137,19 @@ export const Home: React.FC = () => {
                   {metrics.bmi ? metrics.bmi.bmi : 'N/A'}
                 </h3>
                 <p className="text-xs text-gray-400 dark:text-gray-500 mt-1 font-medium">
-                  Status: <span className="text-emerald-600 dark:text-emerald-400 font-bold">{metrics.bmi ? metrics.bmi.category : 'N/A'}</span>
+                  {t.bmiStatus}: <span className="text-emerald-600 dark:text-emerald-400 font-bold">{metrics.bmi ? metrics.bmi.category : 'N/A'}</span>
                 </p>
               </div>
             </div>
             <div className="pt-6 border-t border-gray-50 dark:border-slate-800/40 flex items-center justify-between">
-              <span className="text-xs text-gray-400 dark:text-gray-500">Berdasarkan {profile.height} cm, {profile.weight} kg</span>
+              <span className="text-xs text-gray-400 dark:text-gray-500">
+                {language === 'en' ? `Based on ${profile.height} cm, ${profile.weight} kg` : `Berdasarkan ${profile.height} cm, ${profile.weight} kg`}
+              </span>
               <button
                 onClick={() => navigate('/dashboard')}
                 className="text-xs font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1 hover:underline"
               >
-                Hitung Ulang <ArrowRight className="w-3.5 h-3.5" />
+                {t.recalculate} <ArrowRight className="w-3.5 h-3.5" />
               </button>
             </div>
           </Card>
@@ -160,7 +164,7 @@ export const Home: React.FC = () => {
                   <span className="p-2 rounded-xl bg-sky-50 dark:bg-sky-950/20 text-sky-600 dark:text-sky-400">
                     <Droplet className="w-5 h-5 fill-current" />
                   </span>
-                  <span className="font-semibold text-sm text-gray-500 dark:text-gray-400">Asupan Air Harian</span>
+                  <span className="font-semibold text-sm text-gray-500 dark:text-gray-400">{t.dailyWater}</span>
                 </div>
                 <span className="text-xs font-bold text-sky-600 dark:text-sky-400">{waterProgress}%</span>
               </div>
@@ -178,10 +182,12 @@ export const Home: React.FC = () => {
               </div>
             </div>
             <div className="pt-4 border-t border-gray-50 dark:border-slate-800/40 flex items-center justify-between">
-              <span className="text-xs text-gray-400 dark:text-gray-500">Target: {metrics.waterIntake.goal} ml</span>
+              <span className="text-xs text-gray-400 dark:text-gray-500">
+                {language === 'en' ? `Goal: ${metrics.waterIntake.goal} ml` : `Target: ${metrics.waterIntake.goal} ml`}
+              </span>
               <button
                 onClick={handleAddWater}
-                className="text-xs font-bold text-sky-600 dark:text-sky-400 flex items-center gap-1 hover:underline bg-sky-50 hover:bg-sky-100 dark:bg-sky-950/20 dark:hover:bg-sky-950/40 px-2.5 py-1 rounded-xl transition-all"
+                className="text-xs font-bold text-sky-600 dark:text-sky-400 flex items-center gap-1 hover:underline bg-sky-50 hover:bg-sky-100 dark:bg-sky-955/20 dark:hover:bg-sky-955/40 px-2.5 py-1 rounded-xl transition-all"
               >
                 + 250 ml
               </button>
@@ -195,13 +201,13 @@ export const Home: React.FC = () => {
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2.5">
-                  <span className="p-2 rounded-xl bg-amber-50 dark:bg-amber-950/20 text-amber-600 dark:text-amber-400">
+                  <span className="p-2 rounded-xl bg-amber-50 dark:bg-amber-955/20 text-amber-600 dark:text-amber-400">
                     <Flame className="w-5 h-5 fill-current" />
                   </span>
-                  <span className="font-semibold text-sm text-gray-500 dark:text-gray-400">Target Kalori Harian</span>
+                  <span className="font-semibold text-sm text-gray-500 dark:text-gray-400">{t.dailyCalorie}</span>
                 </div>
                 <span className="text-xs font-bold text-amber-600 dark:text-amber-400">
-                  {metrics.calories.goal - metrics.calories.current} kcal tersisa
+                  {metrics.calories.goal - metrics.calories.current} kcal {t.caloriesRemaining}
                 </span>
               </div>
               <div className="space-y-2">
@@ -218,12 +224,12 @@ export const Home: React.FC = () => {
               </div>
             </div>
             <div className="pt-6 border-t border-gray-50 dark:border-slate-800/40 flex items-center justify-between">
-              <span className="text-xs text-gray-400 dark:text-gray-500">{metrics.calories.logs.length} makanan tercatat</span>
+              <span className="text-xs text-gray-400 dark:text-gray-500">{metrics.calories.logs.length} {t.mealsLogged}</span>
               <button
                 onClick={() => navigate('/dashboard')}
                 className="text-xs font-bold text-amber-600 dark:text-amber-400 flex items-center gap-1 hover:underline"
               >
-                Catat Makanan <ArrowRight className="w-3.5 h-3.5" />
+                {t.logMeal} <ArrowRight className="w-3.5 h-3.5" />
               </button>
             </div>
           </Card>
@@ -239,37 +245,37 @@ export const Home: React.FC = () => {
           </div>
           <div className="space-y-2 flex-1">
             <h3 className="text-base font-bold font-display text-gray-900 dark:text-white">
-              Panduan Gejala & Kesehatan AI
+              {t.symptomGuideTitle}
             </h3>
             <p className="text-xs text-gray-400 dark:text-gray-500 leading-relaxed">
-              Tanyakan seputar gejala fisik, sakit kepala, batuk, atau keluhan kesehatan lainnya. Dapatkan informasi edukatif yang mudah dipahami.
+              {t.symptomGuideDesc}
             </p>
             <button
               onClick={() => navigate('/chat')}
               className="text-xs font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1 group-hover:translate-x-1 transition-transform"
             >
-              Mulai Konsultasi <ArrowRight className="w-3.5 h-3.5" />
+              {t.startConsultationBtn} <ArrowRight className="w-3.5 h-3.5" />
             </button>
           </div>
         </Card>
 
         {/* Life Recommendations */}
         <Card hoverable className="relative overflow-hidden group flex items-start gap-4">
-          <div className="p-3 rounded-2xl bg-rose-50 dark:bg-rose-950/20 text-rose-600 dark:text-rose-400 group-hover:scale-110 transition-transform">
+          <div className="p-3 rounded-2xl bg-rose-50 dark:bg-rose-955/20 text-rose-600 dark:text-rose-400 group-hover:scale-110 transition-transform">
             <Heart className="w-6 h-6 fill-current" />
           </div>
           <div className="space-y-2 flex-1">
             <h3 className="text-base font-bold font-display text-gray-900 dark:text-white">
-              Rekomendasi Aktivitas & Gizi Seimbang
+              {t.activityNutritionTitle}
             </h3>
             <p className="text-xs text-gray-400 dark:text-gray-500 leading-relaxed">
-              Dapatkan rekomendasi pembagian latihan fisik, porsi kalori seimbang, dan tips untuk mengoptimalkan waktu tidur Anda.
+              {t.activityNutritionDesc}
             </p>
             <button
               onClick={() => navigate('/chat?topic=workout')}
               className="text-xs font-bold text-rose-600 dark:text-rose-400 flex items-center gap-1 group-hover:translate-x-1 transition-transform"
             >
-              Lihat Panduan Olahraga <ArrowRight className="w-3.5 h-3.5" />
+              {t.viewWorkoutGuide} <ArrowRight className="w-3.5 h-3.5" />
             </button>
           </div>
         </Card>

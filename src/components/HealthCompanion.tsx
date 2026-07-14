@@ -2,14 +2,26 @@ import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Heart } from 'lucide-react';
 import { useHealthCompanion } from '../context/HealthCompanionContext';
+import { useLanguage } from '../hooks/useLanguage';
+import { useLocalStorage } from '../hooks/useLocalStorage';
+import type { HealthMetricSummary } from '../types';
 
-const WELLNESS_TIPS = [
+const WELLNESS_TIPS_ID = [
   'Jaga kesehatan dan pastikan kebutuhan air harian Anda terpenuhi.',
   'Jangan lupa untuk istirahat yang cukup setiap malam.',
   'Pola makan dengan gizi seimbang adalah kunci energi sepanjang hari.',
   'Aktivitas fisik ringan 15 menit sehari sangat baik untuk sirkulasi darah.',
   'Tarik napas dalam-dalam sejenak untuk mengurangi tingkat stres Anda.',
   'Bila merasa kurang sehat, beristirahatlah dan konsultasikan dengan dokter.',
+];
+
+const WELLNESS_TIPS_EN = [
+  'Stay healthy and make sure your daily water intake needs are met.',
+  'Don\'t forget to get enough rest every night.',
+  'A balanced diet is the key to energy throughout the day.',
+  '15 minutes of light physical activity a day is great for blood circulation.',
+  'Take a deep breath for a moment to reduce your stress level.',
+  'If you feel unwell, rest and consult with a doctor.',
 ];
 
 const MediMascot: React.FC<{ expression: string; onClick: () => void }> = ({ expression, onClick }) => {
@@ -234,19 +246,55 @@ const MediMascot: React.FC<{ expression: string; onClick: () => void }> = ({ exp
 export const HealthCompanion: React.FC = () => {
   const { expression, message, speak, clear } = useHealthCompanion();
   const [bubbleOpen, setBubbleOpen] = useState(false);
+  const { language } = useLanguage();
+  const [metrics] = useLocalStorage<HealthMetricSummary | null>('healthmate-metrics', null);
 
   useEffect(() => {
-    const t = setTimeout(() => {
-      speak('Halo! Saya Medi, asisten kesehatan Anda. Ada yang bisa saya bantu hari ini? 👋', 'greeting', 8000);
+    const timer = setTimeout(() => {
+      // Evaluate metrics for mascot nudges!
+      if (metrics) {
+        // 1. Water goal met
+        if (metrics.waterIntake.current >= metrics.waterIntake.goal && metrics.waterIntake.goal > 0) {
+          const msg = language === 'en'
+            ? 'Awesome! Your daily water intake goal has been reached! Keep it up!'
+            : 'Luar biasa! Target asupan air minum Anda hari ini telah tercapai! Pertahankan!';
+          speak(msg, 'success', 8000);
+          return;
+        }
+        // 2. Low sleep last night
+        if (metrics.sleep.duration > 0 && metrics.sleep.duration < 6) {
+          const msg = language === 'en'
+            ? 'I noticed you slept less than 6 hours. Make sure to get plenty of rest tonight!'
+            : 'Saya perhatikan tidur Anda kurang dari 6 jam tadi malam. Pastikan istirahat cukup malam ini!';
+          speak(msg, 'error', 8000);
+          return;
+        }
+        // 3. Low water intake late in the day (after 14:00)
+        const hour = new Date().getHours();
+        if (hour >= 14 && metrics.waterIntake.current < (metrics.waterIntake.goal * 0.4)) {
+          const msg = language === 'en'
+            ? 'Your hydration level is low today. Please drink some water now!'
+            : 'Asupan air Anda hari ini masih sangat rendah. Yuk, minum segelas air sekarang!';
+          speak(msg, 'error', 8000);
+          return;
+        }
+      }
+
+      // Default greeting
+      const greetMsg = language === 'en'
+        ? 'Hello! I\'m Medi, your health companion. How can I help you today? 👋'
+        : 'Halo! Saya Medi, asisten kesehatan Anda. Ada yang bisa saya bantu hari ini? 👋';
+      speak(greetMsg, 'greeting', 8000);
     }, 1500);
-    return () => clearTimeout(t);
-  }, []);
+    return () => clearTimeout(timer);
+  }, [metrics?.waterIntake.current, metrics?.sleep.duration, language]);
 
   useEffect(() => { setBubbleOpen(!!message); }, [message]);
 
   const handleClick = () => {
     if (expression === 'thinking') return;
-    const tip = WELLNESS_TIPS[Math.floor(Math.random() * WELLNESS_TIPS.length)];
+    const tips = language === 'en' ? WELLNESS_TIPS_EN : WELLNESS_TIPS_ID;
+    const tip = tips[Math.floor(Math.random() * tips.length)];
     speak(tip, 'greeting', 8000);
   };
 

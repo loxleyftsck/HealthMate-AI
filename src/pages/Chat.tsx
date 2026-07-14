@@ -15,7 +15,7 @@ import { Button } from '../components/Button';
 import { ChatBubble } from '../components/ChatBubble';
 import { TypingIndicator } from '../components/TypingIndicator';
 import { useLocalStorage } from '../hooks/useLocalStorage';
-import type { Message, ChatSession, AppSettings } from '../types';
+import type { Message, ChatSession, AppSettings, HealthMetricSummary } from '../types';
 import { getGeminiResponse } from '../services/geminiAi';
 import { INITIAL_SETTINGS } from '../services/mockData';
 import { useHealthCompanion } from '../context/HealthCompanionContext';
@@ -31,6 +31,38 @@ const PROMPT_SUGGESTIONS = [
   { label: 'Bagaimana menjaga kesehatan jantung?', emoji: '❤️', prompt: 'Bagaimana menjaga kesehatan jantung melalui gaya hidup harian?' },
 ];
 
+const isEmergencyMessage = (text: string): boolean => {
+  const lowercaseText = text.toLowerCase();
+  const emergencyKeywords = [
+    'nyeri dada',
+    'sesak napas',
+    'sesak nafas',
+    'serangan jantung',
+    'gejala stroke',
+    'kesulitan bernapas',
+    'kesulitan nafas',
+    'tidak bisa bernapas',
+    'pendarahan hebat',
+    'keracunan',
+    'chest pain',
+    'difficulty breathing',
+    'shortness of breath',
+    'cannot breathe',
+    'heart attack',
+    'stroke symptoms',
+    'severe bleeding',
+    'poisoning'
+  ];
+  return emergencyKeywords.some(keyword => lowercaseText.includes(keyword));
+};
+
+const getEmergencyWarningText = (language: 'en' | 'id'): string => {
+  if (language === 'en') {
+    return `**⚠️ MEDICAL EMERGENCY WARNING**\n\nThe symptoms you mentioned (**chest pain / difficulty breathing / other critical symptoms**) may indicate a life-threatening medical emergency.\n\n**Immediate Action Required:**\n1. **Call emergency services immediately (Dial 112 in Indonesia, 911 in the US, 999 in the UK).**\n2. Go to the nearest Emergency Room (ER) or hospital.\n3. Do not drive yourself to the hospital. Have someone else drive you or wait for an ambulance.`;
+  }
+  return `**⚠️ PERINGATAN DARURAT MEDIS**\n\nGejala yang Anda sebutkan (**nyeri dada / sesak napas / gejala kritis lainnya**) berpotensi merupakan kondisi medis darurat yang mengancam jiwa.\n\n**Langkah yang harus segera dilakukan:**\n1. **Segera hubungi Ambulans / Layanan Darurat (Telepon 112 untuk Indonesia).**\n2. Kunjungi Instalasi Gawat Darurat (IGD) di rumah sakit terdekat.\n3. Jangan mengemudi sendiri ke rumah sakit jika Anda mengalami nyeri dada atau sesak napas yang parah. Mintalah bantuan orang lain atau ambulans.\n4. Jika Anda berada di luar negeri, hubungi nomor panggilan darurat setempat (misal: 911 di AS, 999 di Inggris, 112 di Eropa).`;
+};
+
 export const Chat: React.FC = () => {
   const navigate = useNavigate();
   const { speak } = useHealthCompanion();
@@ -40,6 +72,7 @@ export const Chat: React.FC = () => {
 
   const [sessions, setSessions] = useLocalStorage<ChatSession[]>('healthmate-chat-sessions', []);
   const [settings] = useLocalStorage<AppSettings>('healthmate-settings', INITIAL_SETTINGS);
+  const [metrics] = useLocalStorage<HealthMetricSummary | null>('healthmate-metrics', null);
 
   const [activeSession, setActiveSession] = useState<ChatSession | null>(null);
   const [inputValue, setInputValue] = useState('');
@@ -148,9 +181,39 @@ export const Chat: React.FC = () => {
     setInputValue('');
     setAttachedFile(null);
 
+    // SAFETY CHECK: Catch emergency keywords locally
+    if (isEmergencyMessage(textToSend)) {
+      setIsTyping(true);
+      speak(settings.language === 'en' ? 'Critical symptoms detected. Displaying emergency warning.' : 'Gejala darurat terdeteksi. Menampilkan peringatan medis.', 'error', 4000);
+      
+      setTimeout(() => {
+        const emergencyAiMsg: Message = {
+          id: `msg-${Date.now()}-ai-emergency`,
+          text: getEmergencyWarningText(settings.language),
+          sender: 'ai',
+          timestamp: new Date().toISOString(),
+          isMarkdown: true,
+          isEmergency: true
+        };
+
+        const finalSession = {
+          ...updatedSession,
+          messages: [...updatedMessages, emergencyAiMsg],
+          updatedAt: new Date().toISOString(),
+        };
+
+        setSessions(prev => prev.map((s) => (s.id === activeSession.id ? finalSession : s)));
+        setActiveSession(finalSession);
+        setIsTyping(false);
+        window.dispatchEvent(new Event('chat-sessions-updated'));
+      }, 1000);
+
+      return;
+    }
+
     // Trigger typing response
     setIsTyping(true);
-    speak('Sedang menyusun informasi kesehatan untuk Anda...', 'thinking', 0);
+    speak(settings.language === 'en' ? 'Preparing health information for you...' : 'Sedang menyusun informasi kesehatan untuk Anda...', 'thinking', 0);
     
     // Build conversation history for context (last 6 messages, hemat token)
     const historyForApi = updatedMessages
@@ -163,7 +226,7 @@ export const Chat: React.FC = () => {
     // Generate AI response via Gemini (with mock fallback)
     try {
       setApiError(null);
-      const response = await getGeminiResponse(textToSend, settings, historyForApi);
+      const response = await getGeminiResponse(textToSend, settings, historyForApi, metrics);
 
       const aiMessage: Message = {
         id: `msg-${Date.now()}-ai`,
@@ -185,12 +248,12 @@ export const Chat: React.FC = () => {
 
       // Dispatch custom event to notify sidebar
       window.dispatchEvent(new Event('chat-sessions-updated'));
-      speak('Semoga saran kesehatan ini dapat membantu Anda.', 'success', 6000);
+      speak(settings.language === 'en' ? 'Hope this health advice helps you.' : 'Semoga saran kesehatan ini dapat membantu Anda.', 'success', 6000);
     } catch (e: any) {
       console.error('[HealthMate AI]', e);
-      const msg = e?.message || 'Terjadi kesalahan saat menghubungi AI.';
+      const msg = e?.message || (settings.language === 'en' ? 'An error occurred while contacting AI.' : 'Terjadi kesalahan saat menghubungi AI.');
       setApiError(msg);
-      speak('Maaf, terjadi gangguan koneksi. Silakan coba kirim ulang.', 'error', 6000);
+      speak(settings.language === 'en' ? 'Sorry, connection issue. Please try sending again.' : 'Maaf, terjadi gangguan koneksi. Silakan coba kirim ulang.', 'error', 6000);
     } finally {
       setIsTyping(false);
     }

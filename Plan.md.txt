@@ -462,18 +462,18 @@ Aplikasi ini tidak menggantikan konsultasi dengan tenaga medis profesional dan t
 
 # ✅ MVP Checklist
 
-- [ ] Modern UI
-- [ ] Responsive
-- [ ] Sidebar
-- [ ] Chat Bubble
-- [ ] Typing Indicator
-- [ ] Dummy Chat
-- [ ] Local Storage
-- [ ] Dark Mode
-- [ ] Plugin Panel
-- [ ] BMI Calculator
-- [ ] Water Tracker
-- [ ] Prompt Suggestions
-- [ ] Gemini Flash Integration
-- [ ] Deployment
-- [ ] README Documentation
+- [x] Modern UI
+- [x] Responsive
+- [x] Sidebar
+- [x] Chat Bubble
+- [x] Typing Indicator
+- [x] Dummy Chat
+- [x] Local Storage
+- [x] Dark Mode
+- [x] Plugin Panel
+- [x] BMI Calculator
+- [x] Water Tracker
+- [x] Prompt Suggestions
+- [x] Gemini Flash Integration
+- [x] Deployment
+- [x] README Documentation

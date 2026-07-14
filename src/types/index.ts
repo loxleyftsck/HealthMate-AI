@@ -5,6 +5,7 @@ export interface Message {
   timestamp: string;
   isMarkdown?: boolean;
   pluginUsed?: string;
+  isEmergency?: boolean;
 }
 
 export interface ChatSession {
