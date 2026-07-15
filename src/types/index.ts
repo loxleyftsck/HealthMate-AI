@@ -8,6 +8,13 @@ export interface Message {
   isEmergency?: boolean;
 }
 
+export interface AttachedFile {
+  name: string;
+  type: string;
+  base64?: string;
+  mimeType?: string;
+}
+
 export interface ChatSession {
   id: string;
   title: string;

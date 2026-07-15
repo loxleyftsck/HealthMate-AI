@@ -15,7 +15,7 @@ import { Button } from '../components/Button';
 import { ChatBubble } from '../components/ChatBubble';
 import { TypingIndicator } from '../components/TypingIndicator';
 import { useLocalStorage } from '../hooks/useLocalStorage';
-import type { Message, ChatSession, AppSettings, HealthMetricSummary } from '../types';
+import type { Message, ChatSession, AppSettings, HealthMetricSummary, AttachedFile } from '../types';
 import { getGeminiResponse } from '../services/geminiAi';
 import { INITIAL_SETTINGS } from '../services/mockData';
 import { useHealthCompanion } from '../context/HealthCompanionContext';
@@ -78,13 +78,15 @@ export const Chat: React.FC = () => {
   const [inputValue, setInputValue] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [isListening, setIsListening] = useState(false);
-  const [attachedFile, setAttachedFile] = useState<{ name: string; type: string } | null>(null);
+  const [attachedFile, setAttachedFile] = useState<AttachedFile | null>(null);
   const [apiError, setApiError] = useState<string | null>(null);
 
   const isApiEnabled = Boolean(settings.apiKey?.trim());
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textInputRef = useRef<HTMLTextAreaElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [recognitionInstance, setRecognitionInstance] = useState<any>(null);
 
   // Auto-scroll to bottom of conversation
   const scrollToBottom = () => {
@@ -226,7 +228,7 @@ export const Chat: React.FC = () => {
     // Generate AI response via Gemini (with mock fallback)
     try {
       setApiError(null);
-      const response = await getGeminiResponse(textToSend, settings, historyForApi, metrics);
+      const response = await getGeminiResponse(textToSend, settings, historyForApi, metrics, attachedFile);
 
       const aiMessage: Message = {
         id: `msg-${Date.now()}-ai`,
@@ -305,28 +307,69 @@ export const Chat: React.FC = () => {
     handleSendMessage(prompt);
   };
 
-  const toggleMockMicrophone = () => {
+  const toggleSpeechRecognition = () => {
     if (isListening) {
+      if (recognitionInstance) {
+        recognitionInstance.stop();
+      }
       setIsListening(false);
-    } else {
-      setIsListening(true);
-      // Simulate speech-to-text input after 2 seconds
-      setTimeout(() => {
-        setInputValue('Berapa jam waktu tidur yang ideal setiap malam?');
-        setIsListening(false);
-      }, 2000);
+      return;
     }
+
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      alert(settings.language === 'en' ? 'Speech recognition is not supported in this browser.' : 'Pengenalan suara tidak didukung di browser ini.');
+      return;
+    }
+
+    const recognition = new SpeechRecognition();
+    recognition.lang = settings.language === 'en' ? 'en-US' : 'id-ID';
+    recognition.interimResults = false;
+    recognition.maxAlternatives = 1;
+
+    recognition.onstart = () => {
+      setIsListening(true);
+      speak(settings.language === 'en' ? 'Listening...' : 'Mendengarkan...', 'thinking', 3000);
+    };
+
+    recognition.onerror = (event: any) => {
+      console.error(event.error);
+      setIsListening(false);
+    };
+
+    recognition.onend = () => {
+      setIsListening(false);
+    };
+
+    recognition.onresult = (event: any) => {
+      const speechToText = event.results[0][0].transcript;
+      setInputValue(speechToText);
+    };
+
+    setRecognitionInstance(recognition);
+    recognition.start();
   };
 
-  const triggerMockAttachment = () => {
-    // Open a prompt simulation to attach a file
-    const mockFiles = [
-      { name: 'BloodReport_July2026.pdf', type: 'document' },
-      { name: 'MealPlan_Diet.xlsx', type: 'spreadsheet' },
-      { name: 'SkinRashImage.jpg', type: 'image' },
-    ];
-    const randomIndex = Math.floor(Math.random() * mockFiles.length);
-    setAttachedFile(mockFiles[randomIndex]);
+  const handleAttachmentClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const result = reader.result as string;
+      const base64Data = result.split(',')[1];
+      setAttachedFile({
+        name: file.name,
+        type: 'image',
+        base64: base64Data,
+        mimeType: file.type,
+      });
+    };
+    reader.readAsDataURL(file);
   };
 
   // Get plugins list to display in header
@@ -491,19 +534,23 @@ export const Chat: React.FC = () => {
         )}
 
         <div className="flex items-end gap-3">
-          {/* File Upload Button (Demo) */}
-          <div className="relative group">
-            <button
-              onClick={triggerMockAttachment}
-              title="Lampirkan dokumen (Demo)"
-              className="p-3 rounded-2xl bg-white border border-gray-200/80 hover:bg-gray-50 dark:bg-slate-900 dark:border-slate-800 dark:hover:bg-slate-800 text-gray-400 dark:text-gray-500 shrink-0 transition-all duration-200 active:scale-95"
-            >
-              <Paperclip className="w-5 h-5" />
-            </button>
-            <span className="absolute -top-1.5 -right-1.5 text-[8px] font-bold bg-gray-400 text-white px-1 py-0.5 rounded-full leading-none pointer-events-none">
-              Demo
-            </span>
-          </div>
+          {/* File Upload Input */}
+          <input
+            type="file"
+            ref={fileInputRef}
+            onChange={handleFileChange}
+            accept="image/*"
+            className="hidden"
+          />
+
+          {/* File Upload Button */}
+          <button
+            onClick={handleAttachmentClick}
+            title={settings.language === 'en' ? "Attach image" : "Lampirkan gambar"}
+            className="p-3 rounded-2xl bg-white border border-gray-200/80 hover:bg-gray-50 dark:bg-slate-900 dark:border-slate-800 dark:hover:bg-slate-800 text-gray-400 dark:text-gray-505 shrink-0 transition-all duration-200 active:scale-95"
+          >
+            <Paperclip className="w-5 h-5" />
+          </button>
 
           {/* Prompt Entry Box */}
           <div className="flex-1 relative flex items-center bg-white dark:bg-slate-900 border border-gray-200/80 dark:border-slate-800 rounded-2xl shadow-sm focus-within:ring-2 focus-within:ring-emerald-500/20 focus-within:border-emerald-500 transition-all">
@@ -513,17 +560,20 @@ export const Chat: React.FC = () => {
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder={isListening ? "Mendengarkan..." : "Tuliskan pertanyaan Anda..."}
+              placeholder={
+                isListening
+                  ? (settings.language === 'en' ? "Listening..." : "Mendengarkan...")
+                  : (settings.language === 'en' ? "Type your question..." : "Tuliskan pertanyaan Anda...")
+              }
               disabled={isListening}
               className="w-full pl-4 pr-12 py-3 rounded-2xl text-sm bg-transparent border-0 outline-none resize-none max-h-24 text-gray-800 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-505"
             />
 
-            {/* Microphone Button — Demo simulation */}
+            {/* Microphone Button */}
             <div className="absolute right-3 flex items-center gap-1">
-              <span className="text-[8px] font-bold text-gray-400 leading-none hidden sm:block">Demo</span>
               <button
-                onClick={toggleMockMicrophone}
-                title="Transkripsi suara (Demo)"
+                onClick={toggleSpeechRecognition}
+                title={settings.language === 'en' ? "Voice transcription" : "Transkripsi suara"}
                 className={`p-1.5 rounded-xl transition-all duration-200 ${
                   isListening
                     ? 'bg-rose-500 text-white animate-pulse'

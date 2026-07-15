@@ -1,4 +1,4 @@
-import type { AppSettings, HealthMetricSummary } from '../types';
+import type { AppSettings, HealthMetricSummary, AttachedFile } from '../types';
 
 export const DEFAULT_MODEL = 'gemini-2.5-flash';
 
@@ -11,7 +11,8 @@ export const getGeminiResponse = async (
   userPrompt: string,
   settings: AppSettings,
   conversationHistory: { role: 'user' | 'model'; parts: { text: string }[] }[] = [],
-  metrics?: HealthMetricSummary | null
+  metrics?: HealthMetricSummary | null,
+  attachedFile?: AttachedFile | null
 ): Promise<GeminiResponse> => {
   const apiKey = settings.apiKey?.trim();
 
@@ -94,6 +95,16 @@ Gunakan data dasbor lokal waktu nyata ini untuk menjawab pertanyaan kesehatan pe
   // Bangun history percakapan (maksimal 6 pesan terakhir untuk hemat token)
   const recentHistory = conversationHistory.slice(-6);
 
+  const userParts: any[] = [{ text: userPrompt }];
+  if (attachedFile && attachedFile.base64 && attachedFile.mimeType) {
+    userParts.push({
+      inlineData: {
+        mimeType: attachedFile.mimeType,
+        data: attachedFile.base64,
+      },
+    });
+  }
+
   const requestBody = {
     system_instruction: {
       parts: [{ text: systemPromptWithPlugins }],
@@ -102,7 +113,7 @@ Gunakan data dasbor lokal waktu nyata ini untuk menjawab pertanyaan kesehatan pe
       ...recentHistory,
       {
         role: 'user',
-        parts: [{ text: userPrompt }],
+        parts: userParts,
       },
     ],
     generationConfig: {
