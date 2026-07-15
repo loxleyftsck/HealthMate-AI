@@ -26,6 +26,9 @@ export const INITIAL_SETTINGS: AppSettings = {
     Water: true,
     Symptom: true,
   },
+  syncMode: 'local',
+  cloudEndpoint: 'https://healthmate-api.mock/sync',
+  secretSyncKey: '',
 };
 
 export const MOCK_PLUGINS = [

@@ -42,6 +42,9 @@ export interface AppSettings {
   systemInstruction: string;
   temperature: number;
   plugins: Record<string, boolean>; // e.g. { BMI: true, Water: false }
+  syncMode?: 'local' | 'cloud';
+  cloudEndpoint?: string;
+  secretSyncKey?: string;
 }
 
 export interface WaterLog {

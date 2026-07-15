@@ -24,6 +24,7 @@ import { INITIAL_SETTINGS, MOCK_PLUGINS } from '../services/mockData';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { Avatar } from '../components/Avatar';
+import { encryptData, decryptData } from '../utils/crypto';
 
 export const Settings: React.FC = () => {
   const { theme: activeTheme, setTheme } = useTheme();
@@ -46,6 +47,91 @@ export const Settings: React.FC = () => {
   const [temperature, setTemperature] = useState(settings.temperature.toString());
 
   const [savedFeedback, setSavedFeedback] = useState<string | null>(null);
+
+  // Cloud sync form state
+  const [syncMode, setSyncMode] = useState<'local' | 'cloud'>(settings.syncMode || 'local');
+  const [cloudEndpoint, setCloudEndpoint] = useState(settings.cloudEndpoint || '');
+  const [secretSyncKey, setSecretSyncKey] = useState(settings.secretSyncKey || '');
+
+  const handleBackupToCloud = async () => {
+    try {
+      const localData = {
+        profile: localStorage.getItem('healthmate-profile') || '',
+        settings: localStorage.getItem('healthmate-settings') || '',
+        metrics: localStorage.getItem('healthmate-metrics') || '',
+        chats: localStorage.getItem('healthmate-chat-sessions') || '',
+        meds: localStorage.getItem('healthmate-meds') || '',
+      };
+
+      const payloadStr = JSON.stringify(localData);
+      const encrypted = encryptData(payloadStr, secretSyncKey);
+
+      if (!cloudEndpoint || cloudEndpoint.includes('mock') || cloudEndpoint.includes('localhost')) {
+        await new Promise((resolve) => setTimeout(resolve, 800));
+        localStorage.setItem('healthmate-mock-cloud-storage', encrypted);
+      } else {
+        const res = await fetch(cloudEndpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ data: encrypted }),
+        });
+        if (!res.ok) throw new Error('Network error');
+      }
+
+      showSuccessMessage(t.backupSuccess);
+    } catch (err) {
+      console.error(err);
+      alert(t.backupError);
+    }
+  };
+
+  const handleRestoreFromCloud = async () => {
+    try {
+      let encrypted = '';
+      if (!cloudEndpoint || cloudEndpoint.includes('mock') || cloudEndpoint.includes('localhost')) {
+        await new Promise((resolve) => setTimeout(resolve, 800));
+        encrypted = localStorage.getItem('healthmate-mock-cloud-storage') || '';
+      } else {
+        const res = await fetch(cloudEndpoint);
+        if (!res.ok) throw new Error('Network error');
+        const json = await res.json();
+        encrypted = json.data || '';
+      }
+
+      if (!encrypted) {
+        alert(t.restoreError);
+        return;
+      }
+
+      const decryptedStr = decryptData(encrypted, secretSyncKey);
+      const parsed = JSON.parse(decryptedStr);
+
+      if (!parsed.profile || !parsed.settings) {
+        throw new Error('Malformed backup data');
+      }
+
+      if (parsed.profile) localStorage.setItem('healthmate-profile', parsed.profile);
+      if (parsed.settings) localStorage.setItem('healthmate-settings', parsed.settings);
+      if (parsed.metrics) localStorage.setItem('healthmate-metrics', parsed.metrics);
+      if (parsed.chats) localStorage.setItem('healthmate-chat-sessions', parsed.chats);
+      if (parsed.meds) localStorage.setItem('healthmate-meds', parsed.meds);
+
+      const restoredSettings = JSON.parse(parsed.settings) as AppSettings;
+      setSettings(restoredSettings);
+
+      showSuccessMessage(t.restoreSuccess);
+      setTimeout(() => {
+        window.dispatchEvent(new Event('settings-updated'));
+        window.dispatchEvent(new Event('chat-sessions-updated'));
+        window.dispatchEvent(new Event('metrics-updated'));
+        window.dispatchEvent(new Event('profile-updated'));
+        window.dispatchEvent(new Event('storage'));
+      }, 1000);
+    } catch (err) {
+      console.error(err);
+      alert(t.restoreError);
+    }
+  };
 
   const handleSaveProfile = (e: React.FormEvent) => {
     e.preventDefault();
@@ -82,10 +168,13 @@ export const Settings: React.FC = () => {
       model,
       systemInstruction: systemInstruction.trim(),
       temperature: parseFloat(temperature) || 0.7,
+      syncMode,
+      cloudEndpoint: cloudEndpoint.trim(),
+      secretSyncKey: secretSyncKey.trim(),
     };
     setSettings(updatedSettings);
     window.dispatchEvent(new Event('settings-updated'));
-    const msg = settings.language === 'en' ? 'Gemini API configuration saved successfully!' : 'Konfigurasi API Gemini berhasil disimpan!';
+    const msg = settings.language === 'en' ? 'Configuration saved successfully!' : 'Konfigurasi berhasil disimpan!';
     showSuccessMessage(msg);
   };
 
@@ -438,6 +527,75 @@ export const Settings: React.FC = () => {
             >
               {t.resetHealthData}
             </button>
+          </div>
+        </Card>
+      </motion.div>
+
+      {/* CLOUD SYNC & BACKUP */}
+      <motion.div variants={itemVariants}>
+        <Card>
+          <div className="flex items-center gap-3 mb-4">
+            <span className="p-2.5 rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+              <Cpu className="w-5 h-5" />
+            </span>
+            <div>
+              <h3 className="text-lg font-bold font-display text-gray-900 dark:text-white">{t.cloudSyncTitle}</h3>
+              <p className="text-xs text-gray-400 dark:text-gray-500">{t.cloudSyncDesc}</p>
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-semibold text-gray-500 dark:text-gray-450 ml-1">{t.syncMode}</label>
+                <select
+                  value={syncMode}
+                  onChange={(e) => setSyncMode(e.target.value as any)}
+                  className="px-4 py-2.5 rounded-2xl border border-gray-200 dark:border-slate-800 bg-gray-50/50 text-xs font-semibold text-gray-800 dark:text-gray-200 dark:bg-slate-900/50 outline-none h-[42px] cursor-pointer"
+                >
+                  <option value="local">{t.syncModeOffline}</option>
+                  <option value="cloud">{t.syncModeCloud}</option>
+                </select>
+              </div>
+
+              {syncMode === 'cloud' && (
+                <>
+                  <Input
+                    label={t.cloudEndpoint}
+                    placeholder="https://healthmate-api.mock/sync"
+                    type="text"
+                    value={cloudEndpoint}
+                    onChange={(e) => setCloudEndpoint(e.target.value)}
+                  />
+                  <div className="col-span-1 md:col-span-2">
+                    <Input
+                      label={t.secretSyncKey}
+                      placeholder={t.secretKeyPlaceholder}
+                      type="password"
+                      value={secretSyncKey}
+                      onChange={(e) => setSecretSyncKey(e.target.value)}
+                    />
+                  </div>
+                </>
+              )}
+            </div>
+
+            {syncMode === 'cloud' && (
+              <div className="flex flex-wrap gap-4 pt-2">
+                <Button
+                  onClick={handleBackupToCloud}
+                  className="px-5 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white"
+                >
+                  {t.backupBtn}
+                </Button>
+                <Button
+                  onClick={handleRestoreFromCloud}
+                  className="px-5 rounded-2xl bg-white border border-gray-200 hover:bg-gray-50 dark:bg-slate-900 dark:border-slate-800 dark:hover:bg-slate-800 text-gray-700 dark:text-gray-300"
+                >
+                  {t.restoreBtn}
+                </Button>
+              </div>
+            )}
           </div>
         </Card>
       </motion.div>
