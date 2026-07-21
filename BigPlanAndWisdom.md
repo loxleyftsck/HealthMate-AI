@@ -43,6 +43,8 @@ Healthy habits are formed through nudges. Rather than staying as a static chat b
 | **Phase 3** | MIT Mascot Nudging | Dynamic mascot states based on logged metrics. | **Completed** | [HealthCompanion.tsx](file:///d:/HealthMate%20AI/src/components/HealthCompanion.tsx) |
 | **Phase 4** | Advanced Multi-Modal Coaching | Voice chat and OCR prescription/food photo parsing. | *Planned* | `src/services/voiceService.ts` |
 | **Phase 5** | Cloud Synchronization & Privacy | Secure cloud-native sync with Firebase/Supabase. | *Planned* | `src/context/AuthContext.tsx` |
+| **Phase 6** | Clinical-Grade Dashboard UX | KPI scorecards, semantic color system, mini trend charts, alarm fatigue prevention. | *Planned* | `src/pages/Dashboard.tsx` |
+| **Phase 7** | Hospital Management Module | Separate enterprise B2B system: HL7 FHIR, RBAC, multi-patient EMR, SATUSEHAT compliance. | *Concept* | `hospital-dashboard/` (new repo) |
 
 ### 🚀 Future Milestone Details
 
@@ -54,7 +56,46 @@ Healthy habits are formed through nudges. Rather than staying as a static chat b
 * **Secure Hybrid Database:** Move beyond LocalStorage to a cloud database (Firebase/Supabase) with end-to-end client-side encryption, matching strict health information privacy rules.
 * **Multi-Device Synchronization:** Allow users to track metrics on their phones and view them on their desktops, retaining their custom chat history securely.
 
+#### Phase 6: Clinical-Grade Dashboard UX
+Inspired by global healthcare UI/UX standards (HIMSS, ISO 9241, WCAG AA). Adopts hospital-grade design principles for the personal Dashboard:
+* **KPI Scorecards:** Replace raw input forms with Big Number scorecards for BMI, water, calories, and sleep — achieving 1-second readability.
+* **Semantic Color System:** Strict color rules — Red for critical only, Green for healthy/normal, Blue for neutral data. No decorative colors in health metrics.
+* **Mini Trend Charts:** Inline SVG/Canvas sparklines for 7-day water, calorie, and heart rate trends using existing log data.
+* **Alarm Fatigue Prevention:** Categorize all mascot (Medi) alerts into 3 levels: `CRITICAL` (red, audible), `WARNING` (yellow), `INFO` (silent mascot only).
+* **3-Click Rule:** Deep-link from Home KPIs directly to the relevant Dashboard section.
+* **Reference:** HIMSS Analytics, ISO 9241-210, WCAG 2.1 AA.
+
+#### Phase 7: Hospital Management Module (Enterprise B2B — New Repository)
+A separate, standalone enterprise product for hospital staff and management. **Not part of HealthMate AI core.** Requires a dedicated backend and team.
+
+**Architecture:**
+```
+Frontend (Next.js)  →  HL7 FHIR R4 Backend (Node.js/Java)  →  PostgreSQL + TimescaleDB
+     ↑                         ↑
+  RBAC/SSO               Real-time WebSocket
+  (Keycloak)             (ICU vitals, alerts)
+```
+
+**Key Modules:**
+* **Bed Management Board:** Real-time occupancy heatmap, transfer queue, projected discharge.
+* **Critical Patient Monitor:** Live vitals (HR, SpO2, BP) from ICU devices via HL7 FHIR `Observation` resources.
+* **Blood Bank Dashboard:** Stock levels per blood type with semantic red alerts when below critical threshold.
+* **ER Triage Flow:** Hourly/daily ER visit bar charts + wait time line charts.
+* **EMR Drill-down:** Click any metric → 3-click max to patient Electronic Medical Record.
+* **Role Views:** Separate UI for Doctor, Nurse, Admin, and Executive (C-suite summary view).
+
+**Compliance Requirements:**
+* 🔒 **SATUSEHAT (Indonesia):** API integration for national health data exchange.
+* 🔒 **HL7 FHIR R4:** Standard for real-time multi-source data ingestion.
+* 🔒 **HIPAA/PDPA:** Data masking on public screens (nurse stations), full audit log.
+* ♿ **WCAG AA:** Minimum 4.5:1 contrast ratio, color-blind friendly (always pair color with icon + text).
+* 📋 **ISO 13485:** Medical device software quality management system.
+
+**Estimated Timeline:** 3–6 months with a dedicated team of 3–4 engineers.
+
 ---
+
+
 
 ## 📚 Academic & Corporate References
 

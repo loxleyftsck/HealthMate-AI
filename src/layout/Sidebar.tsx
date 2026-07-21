@@ -13,6 +13,12 @@ import {
   LogOut,
   Trash2,
 } from 'lucide-react';
+import {
+  House as HouseFill,
+  ChatsCircle as ChatsCircleFill,
+  SquaresFour as SquaresFourFill,
+  GearFine as GearFineFill,
+} from '@phosphor-icons/react';
 import { SidebarItem } from '../components/SidebarItem';
 import { useTheme } from '../hooks/useTheme';
 import { useLanguage } from '../hooks/useLanguage';
@@ -119,22 +125,31 @@ export const Sidebar: React.FC<SidebarProps> = ({ onNewChat, isOpen = false, onC
           <span className="px-4 text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider block mb-2">
             {t.navigation}
           </span>
-          <SidebarItem to="/" icon={<Home className="w-4 h-4" />} label={t.home} onClick={onClose} />
+          <SidebarItem
+            to="/"
+            icon={<Home className="w-4 h-4" />}
+            activeIcon={<HouseFill size={16} weight="fill" />}
+            label={t.home}
+            onClick={onClose}
+          />
           <SidebarItem
             to="/chat"
             icon={<MessageSquare className="w-4 h-4" />}
+            activeIcon={<ChatsCircleFill size={16} weight="fill" />}
             label={t.consultation}
             onClick={onClose}
           />
           <SidebarItem
             to="/dashboard"
             icon={<LayoutDashboard className="w-4 h-4" />}
+            activeIcon={<SquaresFourFill size={16} weight="fill" />}
             label={t.healthDashboard}
             onClick={onClose}
           />
           <SidebarItem
             to="/settings"
             icon={<Settings className="w-4 h-4" />}
+            activeIcon={<GearFineFill size={16} weight="fill" />}
             label={t.settings}
             onClick={onClose}
           />

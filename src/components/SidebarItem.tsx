@@ -1,10 +1,13 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface SidebarItemProps {
   to: string;
+  /** Outline icon shown when not active (Lucide) */
   icon: React.ReactNode;
+  /** Filled icon shown when active (Phosphor). Falls back to icon if not provided. */
+  activeIcon?: React.ReactNode;
   label: string;
   badge?: string | number;
   onClick?: () => void;
@@ -13,12 +16,12 @@ interface SidebarItemProps {
 export const SidebarItem: React.FC<SidebarItemProps> = ({
   to,
   icon,
+  activeIcon,
   label,
   badge,
   onClick,
 }) => {
   const location = useLocation();
-  // Check if link is active
   const isActive = location.pathname === to || (to !== '/' && location.pathname.startsWith(to));
 
   return (
@@ -43,9 +46,35 @@ export const SidebarItem: React.FC<SidebarItemProps> = ({
       )}
 
       <div className="flex items-center gap-3">
-        <span className={`w-5 h-5 flex items-center justify-center transition-transform duration-200 group-hover:scale-105`}>
-          {icon}
+        {/* Icon: swap between outline (Lucide) and filled (Phosphor) with crossfade */}
+        <span className="w-5 h-5 flex items-center justify-center relative">
+          <AnimatePresence mode="wait" initial={false}>
+            {isActive && activeIcon ? (
+              <motion.span
+                key="filled"
+                initial={{ opacity: 0, scale: 0.7 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.7 }}
+                transition={{ duration: 0.15 }}
+                className="absolute inset-0 flex items-center justify-center"
+              >
+                {activeIcon}
+              </motion.span>
+            ) : (
+              <motion.span
+                key="outline"
+                initial={{ opacity: 0, scale: 0.7 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.7 }}
+                transition={{ duration: 0.15 }}
+                className="absolute inset-0 flex items-center justify-center group-hover:scale-105 transition-transform"
+              >
+                {icon}
+              </motion.span>
+            )}
+          </AnimatePresence>
         </span>
+
         <span className="font-display tracking-wide">{label}</span>
       </div>
 

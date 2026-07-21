@@ -8,6 +8,7 @@ import {
   AlertCircle,
   Plus,
   Sparkles,
+  FileDown,
 } from 'lucide-react';
 
 import { Button } from '../components/Button';
@@ -272,6 +273,74 @@ export const Chat: React.FC = () => {
     setActiveSession(updatedSession);
   };
 
+  const handleExportPDF = () => {
+    if (!activeSession || activeSession.messages.length === 0) return;
+
+    const sessionDate = new Date(activeSession.createdAt).toLocaleDateString('id-ID', {
+      weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
+    });
+    const plugins = Object.entries(settings.plugins)
+      .filter(([, enabled]) => enabled)
+      .map(([name]) => name)
+      .join(', ') || 'Tidak ada';
+
+    const messagesHtml = activeSession.messages.map((msg) => {
+      const sender = msg.sender === 'ai' ? '🤖 HealthMate AI' : '👤 Saya';
+      const time = new Date(msg.timestamp).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+      const bg = msg.sender === 'ai' ? '#f0fdf4' : '#ecfdf5';
+      const border = msg.isEmergency ? '2px solid #ef4444' : '1px solid #d1fae5';
+      const cleanText = msg.text
+        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+        .replace(/\*(.*?)\*/g, '<em>$1</em>')
+        .replace(/\n/g, '<br/>');
+      return `
+        <div style="margin-bottom:16px; padding:12px 16px; border-radius:12px; background:${bg}; border:${border}">
+          <div style="font-size:11px; font-weight:700; color:#6b7280; margin-bottom:6px;">${sender} &bull; ${time}</div>
+          <div style="font-size:14px; color:#1f2937; line-height:1.6;">${cleanText}</div>
+        </div>`;
+    }).join('');
+
+    const printContent = `
+      <!DOCTYPE html>
+      <html lang="id">
+      <head>
+        <meta charset="UTF-8" />
+        <title>Laporan Konsultasi — ${activeSession.title}</title>
+        <style>
+          body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; padding: 40px; color: #1f2937; max-width: 800px; margin: auto; }
+          h1 { color: #059669; font-size: 22px; margin-bottom: 4px; }
+          .meta { font-size: 12px; color: #6b7280; margin-bottom: 24px; border-bottom: 2px solid #d1fae5; padding-bottom: 16px; }
+          .disclaimer { font-size: 11px; color: #9ca3af; border-top: 1px solid #e5e7eb; padding-top: 12px; margin-top: 24px; }
+          @media print { body { padding: 20px; } }
+        </style>
+      </head>
+      <body>
+        <h1>🩺 Laporan Konsultasi HealthMate AI</h1>
+        <div class="meta">
+          <strong>Topik:</strong> ${activeSession.title}<br/>
+          <strong>Tanggal:</strong> ${sessionDate}<br/>
+          <strong>Fitur Aktif:</strong> ${plugins}<br/>
+          <strong>Jumlah Pesan:</strong> ${activeSession.messages.length} pesan
+        </div>
+        ${messagesHtml}
+        <div class="disclaimer">
+          ⚠️ <strong>Disclaimer:</strong> Informasi dalam laporan ini bersifat edukatif dan bukan merupakan diagnosis medis profesional.
+          Selalu konsultasikan kondisi kesehatan Anda dengan dokter atau tenaga medis terlatih.
+          HealthMate AI — ${new Date().toLocaleDateString('id-ID')}
+        </div>
+      </body>
+      </html>`;
+
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) return;
+    printWindow.document.write(printContent);
+    printWindow.document.close();
+    printWindow.focus();
+    setTimeout(() => {
+      printWindow.print();
+    }, 500);
+  };
+
   const handleDeleteSession = () => {
     if (!activeSession) return;
     const updatedSessions = sessions.filter((s) => s.id !== activeSession.id);
@@ -378,35 +447,35 @@ export const Chat: React.FC = () => {
     .map(([name]) => name);
 
   return (
-    <div className="flex flex-col h-[calc(100vh-10rem)] max-w-5xl mx-auto bg-white dark:bg-slate-900 border border-gray-100 dark:border-slate-800/80 rounded-3xl overflow-hidden shadow-soft">
+    <div className="flex flex-col h-[calc(100vh-10rem)] max-w-5xl mx-auto glassmorphism dark:glassmorphism-dark rounded-3xl overflow-hidden shadow-glass dark:shadow-glass-dark transition-all duration-300">
       {/* Chat Header */}
-      <div className="flex items-center justify-between px-6 py-4 bg-gray-50/50 dark:bg-slate-900/60 border-b border-gray-100 dark:border-slate-800/60">
-        <div className="flex flex-col gap-1">
+      <div className="flex items-center justify-between px-6 py-4 bg-white/30 dark:bg-slate-900/40 backdrop-blur-md border-b border-gray-100/50 dark:border-slate-800/50">
+        <div className="flex flex-col gap-1.5">
           <div className="flex items-center gap-2">
-            <span className="font-bold font-display text-gray-900 dark:text-white text-sm">
+            <span className="font-semibold font-display text-gray-900 dark:text-white text-base tracking-wide">
               {activeSession?.title || 'Konsultasi HealthMate'}
             </span>
           </div>
           {/* Active plugins indicators + AI mode badge */}
           <div className="flex items-center gap-1.5 flex-wrap">
-            <span className="text-[10px] text-gray-400 font-semibold uppercase tracking-wider">Fitur Aktif:</span>
+            <span className="text-[9px] text-gray-400 dark:text-gray-500 font-semibold uppercase tracking-wider">Fitur Aktif:</span>
             {activePlugins.length === 0 ? (
-              <span className="text-[10px] text-rose-500 font-bold uppercase">Tidak ada</span>
+              <span className="text-[9px] text-rose-500 font-bold uppercase tracking-wide">Tidak ada</span>
             ) : (
               activePlugins.map((plugin) => (
                 <span
                   key={plugin}
-                  className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[9px] font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+                  className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full text-[9px] font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20"
                 >
                   {plugin}
                 </span>
               ))
             )}
             {/* AI mode indicator */}
-            <span className={`ml-1 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-bold ${
+            <span className={`ml-1.5 inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[9px] font-semibold border ${
               isApiEnabled
-                ? 'bg-blue-500/10 text-blue-600 dark:text-blue-400'
-                : 'bg-gray-100 text-gray-400 dark:bg-slate-800 dark:text-gray-500'
+                ? 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20'
+                : 'bg-gray-100 text-gray-400 dark:bg-slate-800 dark:text-gray-500 border-gray-200/50 dark:border-slate-700/50'
             }`}>
               {isApiEnabled ? '⚡ Gemini AI' : '🔌 Offline Mode'}
             </span>
@@ -414,12 +483,22 @@ export const Chat: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-2">
+          {/* Export to PDF */}
+          <button
+            onClick={handleExportPDF}
+            disabled={!activeSession || activeSession.messages.length === 0}
+            title="Ekspor Laporan PDF"
+            className="p-2.5 rounded-xl text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 dark:text-gray-400 dark:hover:text-emerald-400 dark:hover:bg-emerald-950/20 disabled:opacity-30 disabled:cursor-not-allowed transition-all duration-200 hover:scale-105 active:scale-95"
+          >
+            <FileDown className="w-4 h-4" />
+          </button>
+
           {/* Clear Session Messages */}
           <button
             onClick={handleClearHistory}
             disabled={!activeSession || activeSession.messages.length === 0}
             title="Bersihkan Obrolan"
-            className="p-2 rounded-xl text-gray-400 hover:text-gray-650 hover:bg-gray-100 dark:text-gray-500 dark:hover:text-gray-300 dark:hover:bg-slate-800/60 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+            className="p-2.5 rounded-xl text-gray-400 hover:text-gray-700 hover:bg-gray-100 dark:text-gray-400 dark:hover:text-gray-200 dark:hover:bg-slate-800 disabled:opacity-30 disabled:cursor-not-allowed transition-all duration-200 hover:scale-105 active:scale-95"
           >
             <Trash2 className="w-4 h-4" />
           </button>
@@ -428,7 +507,7 @@ export const Chat: React.FC = () => {
           <button
             onClick={handleDeleteSession}
             title="Hapus Percakapan"
-            className="p-2 rounded-xl text-gray-400 hover:text-rose-600 hover:bg-rose-50 dark:text-gray-500 dark:hover:text-rose-400 dark:hover:bg-rose-950/20 transition-colors"
+            className="p-2.5 rounded-xl text-gray-400 hover:text-rose-600 hover:bg-rose-50 dark:text-gray-400 dark:hover:text-rose-400 dark:hover:bg-rose-950/20 transition-all duration-200 hover:scale-105 active:scale-95"
           >
             <AlertCircle className="w-4 h-4" />
           </button>
@@ -437,7 +516,7 @@ export const Chat: React.FC = () => {
           <button
             onClick={handleCreateNewSession}
             title="Konsultasi Baru"
-            className="p-2 rounded-xl text-emerald-600 bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/30 dark:hover:bg-emerald-950/50 dark:text-emerald-400 border border-emerald-100/20 dark:border-emerald-900/30 transition-colors"
+            className="p-2.5 rounded-xl text-emerald-600 bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/30 dark:hover:bg-emerald-950/50 dark:text-emerald-400 border border-emerald-100/30 dark:border-emerald-900/30 transition-all duration-200 hover:scale-105 active:scale-95"
           >
             <Plus className="w-4 h-4" />
           </button>
@@ -445,32 +524,33 @@ export const Chat: React.FC = () => {
       </div>
 
       {/* Conversation Area */}
-      <div className="flex-1 overflow-y-auto px-6 py-4 space-y-2 scroll-smooth">
+      <div className="flex-1 overflow-y-auto px-6 py-6 space-y-4 scroll-smooth">
         {activeSession?.messages.length === 0 ? (
           /* Empty Chat State with suggestions */
-          <div className="h-full flex flex-col justify-center items-center max-w-xl mx-auto text-center space-y-6 py-8">
-            <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 text-emerald-600 dark:bg-emerald-950/20 dark:text-emerald-400 flex items-center justify-center">
-              <Sparkles className="w-6 h-6 animate-pulse" />
+          <div className="h-full flex flex-col justify-center items-center max-w-2xl mx-auto text-center space-y-8 py-10 px-4">
+            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-emerald-500/20 to-teal-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shadow-inner relative group">
+              <div className="absolute inset-0 bg-emerald-400/10 rounded-2xl blur-md group-hover:blur-lg transition-all duration-300"></div>
+              <Sparkles className="w-8 h-8 relative z-10 animate-pulse-slow" />
             </div>
-            <div className="space-y-2">
-              <h3 className="text-lg font-bold font-display text-gray-900 dark:text-white">
+            <div className="space-y-3">
+              <h3 className="text-xl font-bold font-display text-gray-900 dark:text-white tracking-tight sm:text-2xl bg-gradient-to-r from-gray-900 to-gray-700 dark:from-white dark:to-slate-300 bg-clip-text text-transparent">
                 Bagaimana HealthMate dapat membantu Anda hari ini?
               </h3>
-              <p className="text-xs text-gray-400 dark:text-gray-500 leading-relaxed">
-                Pilih rekomendasi pertanyaan di bawah ini atau tuliskan keluhan Anda secara detail seputar nutrisi, aktivitas fisik, gejala kesehatan, atau asupan air.
+              <p className="text-xs text-gray-400 dark:text-gray-400 leading-relaxed max-w-lg mx-auto">
+                Pilih salah satu saran konsultasi di bawah ini atau jelaskan kondisi kesehatan Anda secara detail untuk mendapatkan asisten konsultasi AI yang adaptif.
               </p>
             </div>
 
-            {/* Suggestions Chips grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full pt-4">
+            {/* Suggestions Bento Chips grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4.5 w-full pt-6">
               {PROMPT_SUGGESTIONS.map((sug) => (
                 <button
                   key={sug.label}
                   onClick={() => handleSuggestionClick(sug.prompt)}
-                  className="flex items-center gap-2.5 px-4 py-3 rounded-2xl border border-gray-100 dark:border-slate-800 bg-gray-50/50 hover:bg-emerald-50/55 hover:border-emerald-100 dark:bg-slate-900/40 dark:hover:bg-slate-800/40 dark:hover:border-slate-700/60 text-xs font-semibold text-gray-700 dark:text-gray-300 hover:text-emerald-700 dark:hover:text-emerald-400 text-left transition-all duration-150 active:scale-[0.98]"
+                  className="flex items-center gap-3 px-4.5 py-4.5 rounded-2xl border border-gray-150/40 dark:border-slate-800/40 bg-white/40 dark:bg-slate-900/30 hover:bg-white dark:hover:bg-slate-850 hover:border-emerald-500/30 dark:hover:border-emerald-500/30 hover:shadow-soft text-xs font-semibold text-gray-700 dark:text-gray-300 hover:text-emerald-700 dark:hover:text-emerald-400 text-left transition-all duration-200 hover:-translate-y-0.5 active:scale-[0.98] border-l-4 border-l-emerald-500/70"
                 >
-                  <span className="text-base">{sug.emoji}</span>
-                  <span className="truncate">{sug.label}</span>
+                  <span className="text-base select-none shrink-0">{sug.emoji}</span>
+                  <span className="truncate leading-relaxed">{sug.label}</span>
                 </button>
               ))}
             </div>
@@ -506,18 +586,18 @@ export const Chat: React.FC = () => {
       </div>
 
       {/* Input controls pane */}
-      <div className="p-4 border-t border-gray-100 dark:border-slate-800/60 bg-gray-50/30 dark:bg-slate-900/40 flex flex-col gap-2">
+      <div className="p-4 border-t border-gray-100/50 dark:border-slate-800/50 bg-white/30 dark:bg-slate-900/30 backdrop-blur-md flex flex-col gap-2">
         
         {/* Attachment preview banner */}
         {attachedFile && (
-          <div className="flex items-center justify-between p-2 rounded-xl bg-gray-100 dark:bg-slate-800 text-xs font-medium text-gray-700 dark:text-gray-300 border border-gray-200/50 dark:border-slate-700 w-fit">
+          <div className="flex items-center justify-between px-3 py-1.5 rounded-xl bg-emerald-500/10 text-xs font-medium text-emerald-700 dark:text-emerald-350 border border-emerald-500/20 w-fit transition-all duration-200 animate-in fade-in slide-in-from-bottom-2">
             <span className="flex items-center gap-1.5">
               <Paperclip className="w-3.5 h-3.5 text-emerald-500" />
               Terlampir: {attachedFile.name}
             </span>
             <button
               onClick={() => setAttachedFile(null)}
-              className="ml-2 font-bold text-gray-400 hover:text-rose-500 transition-colors"
+              className="ml-3 font-bold text-emerald-600 hover:text-rose-500 transition-colors"
             >
               ×
             </button>
@@ -526,10 +606,10 @@ export const Chat: React.FC = () => {
 
         {/* API Error Banner */}
         {apiError && (
-          <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-rose-50 dark:bg-rose-950/20 text-xs text-rose-600 dark:text-rose-400 border border-rose-100 dark:border-rose-900/30">
+          <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-rose-50 dark:bg-rose-950/20 text-xs text-rose-600 dark:text-rose-400 border border-rose-100 dark:border-rose-900/30 animate-in fade-in slide-in-from-bottom-2">
             <AlertCircle className="w-3.5 h-3.5 shrink-0" />
             <span className="flex-1 truncate">{apiError}</span>
-            <button onClick={() => setApiError(null)} className="font-bold hover:text-rose-800 transition-colors">×</button>
+            <button onClick={() => setApiError(null)} className="font-bold hover:text-rose-800 dark:hover:text-rose-350 transition-colors">×</button>
           </div>
         )}
 
@@ -547,13 +627,13 @@ export const Chat: React.FC = () => {
           <button
             onClick={handleAttachmentClick}
             title={settings.language === 'en' ? "Attach image" : "Lampirkan gambar"}
-            className="p-3 rounded-2xl bg-white border border-gray-200/80 hover:bg-gray-50 dark:bg-slate-900 dark:border-slate-800 dark:hover:bg-slate-800 text-gray-400 dark:text-gray-505 shrink-0 transition-all duration-200 active:scale-95"
+            className="p-3.5 rounded-2xl bg-white border border-gray-200/80 hover:bg-gray-50 dark:bg-slate-900 dark:border-slate-850 dark:hover:bg-slate-800 text-gray-400 dark:text-gray-450 hover:text-gray-600 dark:hover:text-gray-200 shrink-0 transition-all duration-200 hover:scale-105 active:scale-95 shadow-sm"
           >
             <Paperclip className="w-5 h-5" />
           </button>
 
           {/* Prompt Entry Box */}
-          <div className="flex-1 relative flex items-center bg-white dark:bg-slate-900 border border-gray-200/80 dark:border-slate-800 rounded-2xl shadow-sm focus-within:ring-2 focus-within:ring-emerald-500/20 focus-within:border-emerald-500 transition-all">
+          <div className="flex-1 relative flex items-center bg-white dark:bg-slate-900 border border-gray-200/80 dark:border-slate-850 rounded-2xl shadow-sm focus-within:ring-2 focus-within:ring-emerald-500/20 focus-within:border-emerald-500 transition-all duration-200">
             <textarea
               ref={textInputRef}
               rows={1}
@@ -566,18 +646,18 @@ export const Chat: React.FC = () => {
                   : (settings.language === 'en' ? "Type your question..." : "Tuliskan pertanyaan Anda...")
               }
               disabled={isListening}
-              className="w-full pl-4 pr-12 py-3 rounded-2xl text-sm bg-transparent border-0 outline-none resize-none max-h-24 text-gray-800 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-505"
+              className="w-full pl-4 pr-12 py-3.5 rounded-2xl text-sm bg-transparent border-0 outline-none resize-none max-h-24 text-gray-800 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500"
             />
 
             {/* Microphone Button */}
-            <div className="absolute right-3 flex items-center gap-1">
+            <div className="absolute right-3.5 flex items-center gap-1">
               <button
                 onClick={toggleSpeechRecognition}
                 title={settings.language === 'en' ? "Voice transcription" : "Transkripsi suara"}
                 className={`p-1.5 rounded-xl transition-all duration-200 ${
                   isListening
-                    ? 'bg-rose-500 text-white animate-pulse'
-                    : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-800'
+                    ? 'bg-rose-500 text-white animate-mic-glow'
+                    : 'text-gray-400 hover:text-gray-650 dark:hover:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-800'
                 }`}
               >
                 <Mic className="w-4 h-4" />
@@ -589,7 +669,7 @@ export const Chat: React.FC = () => {
           <Button
             onClick={() => handleSendMessage(inputValue)}
             disabled={!inputValue.trim() || isTyping || isListening}
-            className="p-3.5 rounded-2xl shadow-sm shadow-emerald-600/10 shrink-0 active:scale-95"
+            className="p-4 rounded-2xl shadow-md bg-gradient-to-r from-emerald-600 to-teal-600 border-none shrink-0 transition-all duration-200 hover:scale-105 active:scale-95 disabled:scale-100 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <Send className="w-4 h-4 text-white" />
           </Button>

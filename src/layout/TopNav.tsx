@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useLocation } from 'react-router-dom';
-import { Menu, Bell, Droplet, Flame } from 'lucide-react';
+import { Menu } from 'lucide-react';
+import { Drop as DropFill, Fire as FireFill, BellRinging } from '@phosphor-icons/react';
 import type { HealthMetricSummary } from '../types';
 import { INITIAL_DASHBOARD_DATA } from '../services/mockData';
 
@@ -69,14 +70,26 @@ export const TopNav: React.FC<TopNavProps> = ({ onMenuToggle }) => {
         {/* Quick Health Stats - Desktop Only */}
         <div className="hidden md:flex items-center gap-4 text-xs font-semibold">
           {/* Hydration Stat */}
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-sky-50 dark:bg-sky-950/20 text-sky-700 dark:text-sky-400 border border-sky-100/30 dark:border-sky-900/30">
-            <Droplet className="w-3.5 h-3.5 fill-current animate-pulse-slow" />
+          <div className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border transition-colors ${
+            waterProgress >= 100
+              ? 'bg-emerald-50 dark:bg-emerald-950/20 text-emerald-700 dark:text-emerald-400 border-emerald-100/30 dark:border-emerald-900/30'
+              : waterProgress >= 50
+              ? 'bg-sky-50 dark:bg-sky-950/20 text-sky-700 dark:text-sky-400 border-sky-100/30 dark:border-sky-900/30'
+              : 'bg-rose-50 dark:bg-rose-950/20 text-rose-700 dark:text-rose-400 border-rose-100/30 dark:border-rose-900/30'
+          }`}>
+            <DropFill size={14} weight="fill" className="shrink-0" />
             <span>Air: {metrics.waterIntake.current} ml ({waterProgress}%)</span>
           </div>
 
           {/* Calorie Stat */}
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-amber-50 dark:bg-amber-950/20 text-amber-700 dark:text-amber-400 border border-amber-100/30 dark:border-amber-900/30">
-            <Flame className="w-3.5 h-3.5 fill-current" />
+          <div className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border transition-colors ${
+            caloriesProgress >= 100
+              ? 'bg-rose-50 dark:bg-rose-950/20 text-rose-700 dark:text-rose-400 border-rose-100/30 dark:border-rose-900/30'
+              : caloriesProgress >= 50
+              ? 'bg-amber-50 dark:bg-amber-950/20 text-amber-700 dark:text-amber-400 border-amber-100/30 dark:border-amber-900/30'
+              : 'bg-gray-50 dark:bg-slate-800/40 text-gray-500 dark:text-gray-400 border-gray-100/30 dark:border-slate-700/30'
+          }`}>
+            <FireFill size={14} weight="fill" className="shrink-0" />
             <span>Kalori: {metrics.calories.current} kcal ({caloriesProgress}%)</span>
           </div>
         </div>
@@ -87,7 +100,7 @@ export const TopNav: React.FC<TopNavProps> = ({ onMenuToggle }) => {
             className="relative p-2 rounded-xl text-gray-500 hover:text-gray-700 hover:bg-gray-50 dark:text-gray-400 dark:hover:text-gray-200 dark:hover:bg-slate-800/50 transition-colors"
             title="Notifications"
           >
-            <Bell className="w-5 h-5" />
+            <BellRinging size={20} weight="fill" className="text-gray-500 dark:text-gray-400" />
             <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-rose-500 border border-white dark:border-slate-900" />
           </button>
         </div>

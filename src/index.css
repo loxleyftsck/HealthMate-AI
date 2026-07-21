@@ -91,3 +91,18 @@ body {
   color: var(--color-primary);
   margin-left: 2px;
 }
+
+/* Custom microphone recording glow */
+@keyframes mic-glow {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.6);
+  }
+  70% {
+    box-shadow: 0 0 0 8px rgba(239, 68, 68, 0);
+  }
+}
+
+.animate-mic-glow {
+  animation: mic-glow 1.5s infinite;
+}
+

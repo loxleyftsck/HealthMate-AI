@@ -335,6 +335,44 @@ export const Dashboard: React.FC = () => {
     setMeds(updatedMeds);
   };
 
+  // ── Streak Gamification ──────────────────────────────────────────────────
+  const [streak, setStreak] = useState(0);
+  const [streakMilestone, setStreakMilestone] = useState<string | null>(null);
+
+  useEffect(() => {
+    const today = new Date().toDateString();
+    const raw = localStorage.getItem('healthmate-streak');
+    const data = raw ? JSON.parse(raw) : { lastActive: '', count: 0 };
+
+    if (data.lastActive === today) {
+      // Already counted today
+      setStreak(data.count);
+    } else {
+      const yesterday = new Date();
+      yesterday.setDate(yesterday.getDate() - 1);
+      const isConsecutive = data.lastActive === yesterday.toDateString();
+      const newCount = isConsecutive ? data.count + 1 : 1;
+      const updated = { lastActive: today, count: newCount };
+      localStorage.setItem('healthmate-streak', JSON.stringify(updated));
+      setStreak(newCount);
+
+      // Check milestones
+      if (newCount === 7) setStreakMilestone('🥈 7 Hari Berturut-turut!');
+      else if (newCount === 30) setStreakMilestone('🥇 30 Hari Hebat!');
+      else if (newCount === 100) setStreakMilestone('🏆 100 Hari Legenda!');
+    }
+  }, []);
+
+  const getStreakMessage = (days: number) => {
+    if (days >= 100) return 'Legenda Kesehatan! 🏆';
+    if (days >= 30) return 'Konsistensi Luar Biasa! 🥇';
+    if (days >= 14) return 'Dua Minggu Kuat! 💪';
+    if (days >= 7) return 'Satu Minggu Penuh! 🥈';
+    if (days >= 3) return 'Mulai Membangun Kebiasaan!';
+    return 'Ayo Jaga Konsistensinya!';
+  };
+  // ─────────────────────────────────────────────────────────────────────────
+
   const containerVariants = {
     hidden: { opacity: 0 },
     show: {
@@ -404,6 +442,69 @@ export const Dashboard: React.FC = () => {
           Reset Hari Ini
         </button>
       </div>
+
+      {/* ── Streak Gamification Banner ─────────────────────────────── */}
+      <motion.div
+        variants={itemVariants}
+        className="relative overflow-hidden rounded-2xl px-5 py-4 flex items-center justify-between gap-4 bg-gradient-to-r from-amber-500/10 via-orange-500/8 to-rose-500/10 dark:from-amber-500/15 dark:via-orange-500/10 dark:to-rose-500/15 border border-amber-200/40 dark:border-amber-500/20"
+      >
+        {/* Decorative glow */}
+        <div className="absolute -right-8 -top-8 w-32 h-32 bg-amber-400/10 rounded-full blur-3xl pointer-events-none" />
+
+        <div className="flex items-center gap-3 min-w-0">
+          {/* Fire icon + streak count */}
+          <div className="relative shrink-0">
+            <span className="text-3xl select-none" role="img" aria-label="streak">
+              {streak >= 30 ? '🏆' : streak >= 7 ? '🔥' : '✨'}
+            </span>
+            {streak > 0 && (
+              <span className="absolute -bottom-1 -right-2 text-[10px] font-black text-white bg-amber-500 rounded-full w-5 h-5 flex items-center justify-center shadow-sm">
+                {streak > 99 ? '99+' : streak}
+              </span>
+            )}
+          </div>
+
+          <div className="min-w-0">
+            <p className="text-sm font-bold text-gray-800 dark:text-white leading-tight">
+              {streak > 0 ? `${streak} Hari Streak!` : 'Mulai Streak Hari Ini'}
+            </p>
+            <p className="text-xs text-amber-700/70 dark:text-amber-400/80 truncate">
+              {getStreakMessage(streak)}
+            </p>
+          </div>
+        </div>
+
+        {/* Milestone badges */}
+        <div className="flex items-center gap-1.5 shrink-0">
+          <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold border transition-all ${
+            streak >= 7
+              ? 'bg-amber-100 text-amber-700 border-amber-300 dark:bg-amber-500/20 dark:text-amber-300 dark:border-amber-500/40'
+              : 'bg-gray-100 text-gray-400 border-gray-200 dark:bg-slate-800 dark:text-gray-600 dark:border-slate-700'
+          }`}>7 hari</span>
+          <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold border transition-all ${
+            streak >= 30
+              ? 'bg-orange-100 text-orange-700 border-orange-300 dark:bg-orange-500/20 dark:text-orange-300 dark:border-orange-500/40'
+              : 'bg-gray-100 text-gray-400 border-gray-200 dark:bg-slate-800 dark:text-gray-600 dark:border-slate-700'
+          }`}>30 hari</span>
+          <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold border transition-all ${
+            streak >= 100
+              ? 'bg-rose-100 text-rose-700 border-rose-300 dark:bg-rose-500/20 dark:text-rose-300 dark:border-rose-500/40'
+              : 'bg-gray-100 text-gray-400 border-gray-200 dark:bg-slate-800 dark:text-gray-600 dark:border-slate-700'
+          }`}>100 hari</span>
+        </div>
+
+        {/* Milestone pop notification */}
+        {streakMilestone && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.8, y: -8 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            className="absolute top-2 right-2 px-3 py-1.5 rounded-xl bg-amber-500 text-white text-[11px] font-bold shadow-lg"
+          >
+            {streakMilestone}
+          </motion.div>
+        )}
+      </motion.div>
+      {/* ─────────────────────────────────────────────────────────── */}
 
       {/* 2-Column Grid for Main Metrics */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
