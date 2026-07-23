@@ -1,11 +1,12 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Heart } from 'lucide-react';
+import { X, Heart, Zap } from 'lucide-react';
 import { useHealthCompanion } from '../context/HealthCompanionContext';
 import { useLanguage } from '../hooks/useLanguage';
 import { useLocalStorage } from '../hooks/useLocalStorage';
 import type { HealthMetricSummary } from '../types';
 
+// ── Wellness Tips ──────────────────────────────────────────────────────────────
 const WELLNESS_TIPS_ID = [
   'Jaga kesehatan dan pastikan kebutuhan air harian Anda terpenuhi.',
   'Jangan lupa untuk istirahat yang cukup setiap malam.',
@@ -13,17 +14,64 @@ const WELLNESS_TIPS_ID = [
   'Aktivitas fisik ringan 15 menit sehari sangat baik untuk sirkulasi darah.',
   'Tarik napas dalam-dalam sejenak untuk mengurangi tingkat stres Anda.',
   'Bila merasa kurang sehat, beristirahatlah dan konsultasikan dengan dokter.',
+  'Makan sayur dan buah berwarna-warni setiap hari untuk nutrisi yang optimal.',
+  'Batasi konsumsi gula dan minuman manis agar energi tetap stabil.',
+  'Jaga kesehatan mental dengan meluangkan waktu untuk hal-hal yang Anda nikmati.',
+  'Paparan sinar matahari pagi selama 10–15 menit baik untuk produksi vitamin D.',
+  'Hindari duduk terlalu lama — coba berdiri dan regangkan tubuh setiap jam.',
+  'Cukupi kebutuhan protein harian agar otot dan sel tubuh terjaga dengan baik.',
 ];
 
 const WELLNESS_TIPS_EN = [
   'Stay healthy and make sure your daily water intake needs are met.',
-  'Don\'t forget to get enough rest every night.',
+  "Don't forget to get enough rest every night.",
   'A balanced diet is the key to energy throughout the day.',
   '15 minutes of light physical activity a day is great for blood circulation.',
   'Take a deep breath for a moment to reduce your stress level.',
   'If you feel unwell, rest and consult with a doctor.',
+  'Eat a variety of colorful fruits and vegetables every day for optimal nutrition.',
+  'Limit sugar and sugary drinks to keep your energy levels stable.',
+  'Take care of your mental health by making time for things you enjoy.',
+  '10–15 minutes of morning sunlight is great for vitamin D production.',
+  'Avoid sitting too long — try to stand and stretch every hour.',
+  'Meet your daily protein needs to keep your muscles and body cells healthy.',
 ];
 
+// ── Mood ring colours per expression ───────────────────────────────────────────
+const MOOD_RING: Record<string, string> = {
+  greeting:   '#22C55E',  // green
+  success:    '#34D399',  // emerald
+  error:      '#F87171',  // red
+  thinking:   '#818CF8',  // indigo
+  idle:       '#6EE7B7',  // teal
+};
+
+// ── Typewriter hook ────────────────────────────────────────────────────────────
+function useTypewriter(text: string, speed = 22) {
+  const [displayed, setDisplayed] = useState('');
+  const indexRef = useRef(0);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    setDisplayed('');
+    indexRef.current = 0;
+
+    const tick = () => {
+      if (indexRef.current < text.length) {
+        setDisplayed(text.slice(0, indexRef.current + 1));
+        indexRef.current += 1;
+        timerRef.current = setTimeout(tick, speed);
+      }
+    };
+
+    timerRef.current = setTimeout(tick, speed);
+    return () => { if (timerRef.current) clearTimeout(timerRef.current); };
+  }, [text, speed]);
+
+  return displayed;
+}
+
+// ── MediMascot SVG ─────────────────────────────────────────────────────────────
 const MediMascot: React.FC<{ expression: string; onClick: () => void }> = ({ expression, onClick }) => {
   const isHappy   = expression === 'success' || expression === 'greeting';
   const isConcern = expression === 'error';
@@ -243,88 +291,182 @@ const MediMascot: React.FC<{ expression: string; onClick: () => void }> = ({ exp
   );
 };
 
+// ── Typewriter Bubble ──────────────────────────────────────────────────────────
+const TypewriterBubble: React.FC<{
+  message: string;
+  expression: string;
+  onClose: () => void;
+}> = ({ message, expression, onClose }) => {
+  const displayed = useTypewriter(message, 20);
+  const isDone = displayed.length === message.length;
+
+  const ringColor = MOOD_RING[expression] ?? MOOD_RING.idle;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 16, scale: 0.86 }}
+      animate={{ opacity: 1, y: 0,  scale: 1 }}
+      exit={{ opacity: 0,  y: 10, scale: 0.92 }}
+      transition={{ type: 'spring', stiffness: 420, damping: 28 }}
+      className="mb-4 max-w-[260px] md:max-w-[290px] bg-white/98 dark:bg-slate-900/98 backdrop-blur-lg border border-emerald-100 dark:border-emerald-900/50 rounded-2xl shadow-2xl pointer-events-auto relative overflow-hidden"
+      style={{ borderTopColor: ringColor, borderTopWidth: 3 }}
+    >
+      {/* Coloured accent bar */}
+      <div
+        className="absolute top-0 left-0 right-0 h-[3px] rounded-t-2xl"
+        style={{ background: ringColor }}
+      />
+
+      <div className="p-4 pt-3">
+        <div className="flex justify-between items-start mb-2">
+          <span
+            className="text-[10px] font-bold uppercase tracking-wider flex items-center gap-1"
+            style={{ color: ringColor }}
+          >
+            <Heart className="w-3 h-3 fill-current" /> Medi
+          </span>
+          <div className="flex items-center gap-1.5">
+            {/* Pulse dot: blinks while typing, goes solid when done */}
+            <motion.span
+              className="w-1.5 h-1.5 rounded-full"
+              style={{ background: ringColor }}
+              animate={isDone ? { opacity: 1 } : { opacity: [1, 0.2, 1] }}
+              transition={{ repeat: isDone ? 0 : Infinity, duration: 0.7 }}
+            />
+            <button
+              onClick={onClose}
+              className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 p-0.5 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        </div>
+
+        <p className="text-xs font-medium leading-relaxed text-gray-700 dark:text-gray-200 min-h-[2.5rem]">
+          {displayed}
+          {/* blinking cursor while still typing */}
+          {!isDone && (
+            <motion.span
+              className="inline-block w-0.5 h-3.5 ml-0.5 rounded-full align-middle"
+              style={{ background: ringColor }}
+              animate={{ opacity: [1, 0] }}
+              transition={{ repeat: Infinity, duration: 0.5 }}
+            />
+          )}
+        </p>
+      </div>
+
+      {/* Speech bubble tail */}
+      <div className="absolute right-8 -bottom-[7px] w-3.5 h-3.5 bg-white dark:bg-slate-900 border-r border-b border-emerald-100 dark:border-emerald-900/50 rotate-45" />
+    </motion.div>
+  );
+};
+
+// ── Main Component ─────────────────────────────────────────────────────────────
 export const HealthCompanion: React.FC = () => {
   const { expression, message, speak, clear } = useHealthCompanion();
   const [bubbleOpen, setBubbleOpen] = useState(false);
+  const [unread, setUnread] = useState(false);
   const { language } = useLanguage();
   const [metrics] = useLocalStorage<HealthMetricSummary | null>('healthmate-metrics', null);
 
+  // Contextual greeting nudges on mount
   useEffect(() => {
     const timer = setTimeout(() => {
-      // Evaluate metrics for mascot nudges!
       if (metrics) {
         // 1. Water goal met
         if (metrics.waterIntake.current >= metrics.waterIntake.goal && metrics.waterIntake.goal > 0) {
           const msg = language === 'en'
-            ? 'Awesome! Your daily water intake goal has been reached! Keep it up!'
-            : 'Luar biasa! Target asupan air minum Anda hari ini telah tercapai! Pertahankan!';
+            ? 'Awesome! Your daily water intake goal has been reached! Keep it up! 💧'
+            : 'Luar biasa! Target asupan air minum Anda hari ini telah tercapai! Pertahankan! 💧';
           speak(msg, 'success', 8000);
           return;
         }
         // 2. Low sleep last night
         if (metrics.sleep.duration > 0 && metrics.sleep.duration < 6) {
           const msg = language === 'en'
-            ? 'I noticed you slept less than 6 hours. Make sure to get plenty of rest tonight!'
-            : 'Saya perhatikan tidur Anda kurang dari 6 jam tadi malam. Pastikan istirahat cukup malam ini!';
+            ? 'I noticed you slept less than 6 hours. Make sure to get plenty of rest tonight! 😴'
+            : 'Saya perhatikan tidur Anda kurang dari 6 jam tadi malam. Pastikan istirahat cukup malam ini! 😴';
           speak(msg, 'error', 8000);
           return;
         }
-        // 3. Low water intake late in the day (after 14:00)
+        // 3. Low hydration after 14:00
         const hour = new Date().getHours();
         if (hour >= 14 && metrics.waterIntake.current < (metrics.waterIntake.goal * 0.4)) {
           const msg = language === 'en'
-            ? 'Your hydration level is low today. Please drink some water now!'
-            : 'Asupan air Anda hari ini masih sangat rendah. Yuk, minum segelas air sekarang!';
+            ? 'Your hydration level is very low today. Please drink some water now! 🚰'
+            : 'Asupan air Anda hari ini masih sangat rendah. Yuk, minum segelas air sekarang! 🚰';
           speak(msg, 'error', 8000);
+          return;
+        }
+        // 4. Calorie goal nearly reached
+        if (metrics.calories.current >= metrics.calories.goal * 0.9 && metrics.calories.goal > 0) {
+          const msg = language === 'en'
+            ? "You're almost at your calorie goal for today! Great discipline! 🔥"
+            : 'Anda hampir mencapai target kalori hari ini! Disiplin yang luar biasa! 🔥';
+          speak(msg, 'success', 8000);
           return;
         }
       }
 
       // Default greeting
       const greetMsg = language === 'en'
-        ? 'Hello! I\'m Medi, your health companion. How can I help you today? 👋'
+        ? "Hello! I'm Medi, your health companion. How can I help you today? 👋"
         : 'Halo! Saya Medi, asisten kesehatan Anda. Ada yang bisa saya bantu hari ini? 👋';
       speak(greetMsg, 'greeting', 8000);
     }, 1500);
     return () => clearTimeout(timer);
-  }, [metrics?.waterIntake.current, metrics?.sleep.duration, language]);
+  }, [metrics?.waterIntake.current, metrics?.sleep.duration, metrics?.calories.current, language]);
 
-  useEffect(() => { setBubbleOpen(!!message); }, [message]);
+  // Sync bubble open/unread state with message
+  useEffect(() => {
+    if (message) {
+      setBubbleOpen(true);
+      setUnread(true);
+    } else {
+      setBubbleOpen(false);
+    }
+  }, [message]);
 
   const handleClick = () => {
     if (expression === 'thinking') return;
+
+    if (bubbleOpen) {
+      // second click = close
+      setBubbleOpen(false);
+      setUnread(false);
+      return;
+    }
+
     const tips = language === 'en' ? WELLNESS_TIPS_EN : WELLNESS_TIPS_ID;
     const tip = tips[Math.floor(Math.random() * tips.length)];
-    speak(tip, 'greeting', 8000);
+    speak(tip, 'greeting', 9000);
+    setUnread(false);
   };
+
+  const handleClose = () => {
+    clear();
+    setBubbleOpen(false);
+    setUnread(false);
+  };
+
+  const ringColor = MOOD_RING[expression] ?? MOOD_RING.idle;
 
   return (
     <div className="fixed bottom-6 right-6 z-40 flex flex-col items-end pointer-events-none">
 
+      {/* Speech bubble */}
       <AnimatePresence>
         {bubbleOpen && message && (
-          <motion.div
-            initial={{ opacity: 0, y: 16, scale: 0.86 }}
-            animate={{ opacity: 1, y: 0,  scale: 1 }}
-            exit={{ opacity: 0,  y: 10, scale: 0.92 }}
-            transition={{ type: 'spring', stiffness: 420, damping: 28 }}
-            className="mb-4 max-w-[260px] md:max-w-[290px] p-4 bg-white/98 dark:bg-slate-900/98 backdrop-blur-lg border border-emerald-100 dark:border-emerald-900/50 rounded-2xl shadow-2xl pointer-events-auto relative"
-          >
-            <div className="flex justify-between items-start mb-2">
-              <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider flex items-center gap-1">
-                <Heart className="w-3 h-3 fill-current" /> Medi
-              </span>
-              <button onClick={clear}
-                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 p-0.5 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors">
-                <X className="w-3.5 h-3.5" />
-              </button>
-            </div>
-            <p className="text-xs font-medium leading-relaxed text-gray-700 dark:text-gray-200">{message}</p>
-            <div className="absolute right-8 -bottom-[7px] w-3.5 h-3.5 bg-white dark:bg-slate-900 border-r border-b border-emerald-100 dark:border-emerald-900/50 rotate-45" />
-          </motion.div>
+          <TypewriterBubble
+            message={message}
+            expression={expression}
+            onClose={handleClose}
+          />
         )}
       </AnimatePresence>
 
+      {/* Typing indicator */}
       <AnimatePresence>
         {expression === 'thinking' && (
           <motion.div
@@ -340,7 +482,46 @@ export const HealthCompanion: React.FC = () => {
         )}
       </AnimatePresence>
 
-      <div className="pointer-events-auto mr-1">
+      {/* Mascot + mood glow ring */}
+      <div className="pointer-events-auto mr-1 relative">
+
+        {/* Mood glow ring behind mascot */}
+        <motion.div
+          className="absolute inset-0 rounded-full pointer-events-none"
+          style={{
+            background: `radial-gradient(circle, ${ringColor}40 0%, transparent 70%)`,
+            transform: 'scale(1.2)',
+          }}
+          animate={{ opacity: [0.4, 0.85, 0.4], scale: [1.15, 1.3, 1.15] }}
+          transition={{ repeat: Infinity, duration: 2.8, ease: 'easeInOut' }}
+        />
+
+        {/* Unread notification dot */}
+        <AnimatePresence>
+          {unread && !bubbleOpen && (
+            <motion.span
+              key="unread-dot"
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              exit={{ scale: 0 }}
+              className="absolute top-1 right-1 w-3 h-3 rounded-full border-2 border-white dark:border-slate-950 z-10"
+              style={{ background: ringColor }}
+            />
+          )}
+        </AnimatePresence>
+
+        {/* Quick tip icon badge */}
+        <motion.div
+          className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full flex items-center justify-center shadow-md border-2 border-white dark:border-slate-900 z-10"
+          style={{ background: ringColor }}
+          initial={{ scale: 0 }}
+          animate={{ scale: 1 }}
+          transition={{ delay: 2, type: 'spring', stiffness: 400, damping: 18 }}
+          title={language === 'en' ? 'Tap for a wellness tip!' : 'Ketuk untuk tips kesehatan!'}
+        >
+          <Zap className="w-3 h-3 text-white fill-white" />
+        </motion.div>
+
         <MediMascot expression={expression} onClick={handleClick} />
       </div>
     </div>

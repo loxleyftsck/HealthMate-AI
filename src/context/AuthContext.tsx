@@ -87,7 +87,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (savedProfile) {
         try {
           setUser(JSON.parse(savedProfile));
-        } catch (e) {}
+        } catch (e) {
+          console.warn('[Auth] Failed to parse profile from storage:', e);
+        }
       }
       setIsLoggedIn(localStorage.getItem('healthmate-logged-in') === 'true');
     };

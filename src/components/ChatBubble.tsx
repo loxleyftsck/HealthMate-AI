@@ -43,8 +43,8 @@ export const ChatBubble: React.FC<ChatBubbleProps> = ({
 
     const utterance = new SpeechSynthesisUtterance(cleanText);
     // Detect language from text heuristic
-    utterance.lang = /[a-zA-Z]{4,}/.test(cleanText) && !/[\u00C0-\u024F\u1E00-\u1EFF]/.test(cleanText)
-      ? 'id-ID'
+    utterance.lang = /[a-zA-Z]{4,}/.test(cleanText) && !/\b(dan|yang|dengan|untuk|atau|pada|ini|itu|bisa|saya|anda|kesehatan)\b/i.test(cleanText)
+      ? 'en-US'
       : 'id-ID';
     utterance.rate = 0.92;
     utterance.pitch = 1.05;
@@ -86,7 +86,7 @@ export const ChatBubble: React.FC<ChatBubbleProps> = ({
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.35, ease: 'easeOut' }}
       className={`group flex w-full gap-3 py-3 px-2 hover:bg-gray-50/20 dark:hover:bg-slate-900/5 rounded-2xl transition-colors duration-200 ${
-        isAI ? 'justify-start' : 'justify-end flex-row-reverse'
+        isAI ? 'justify-start' : 'flex-row-reverse justify-start'
       }`}
     >
       {/* Avatar */}
@@ -104,7 +104,7 @@ export const ChatBubble: React.FC<ChatBubbleProps> = ({
           <span className="text-[11px] font-bold text-gray-500 dark:text-gray-400 tracking-wide">
             {isAI ? 'HealthMate AI' : userName}
           </span>
-          <span className="text-[9px] text-gray-450 dark:text-gray-500 font-medium">
+          <span className="text-[9px] text-gray-400 dark:text-gray-500 font-medium">
             {new Date(message.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
           </span>
           {isAI && message.pluginUsed && (

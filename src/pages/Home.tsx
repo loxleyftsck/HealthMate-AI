@@ -12,12 +12,20 @@ import {
 } from 'lucide-react';
 import { Card } from '../components/Card';
 import { Button } from '../components/Button';
+import { SleepCard } from '../components/SleepCard';
+import { WorkoutCard } from '../components/WorkoutCard';
+import { HeartRateCard } from '../components/HeartRateCard';
+import { AiInsightCard } from '../components/AiInsightCard';
+import { MiniTrendChart } from '../components/MiniTrendChart';
 import { useLocalStorage } from '../hooks/useLocalStorage';
 import type { HealthMetricSummary } from '../types';
 import { INITIAL_DASHBOARD_DATA } from '../services/mockData';
 import { useHealthCompanion } from '../context/HealthCompanionContext';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../hooks/useLanguage';
+
+import { addWaterIntake } from '../utils/healthUtils';
+import { StaggerContainer, StaggerItem } from '../utils/animations';
 
 export const Home: React.FC = () => {
   const navigate = useNavigate();
@@ -36,22 +44,8 @@ export const Home: React.FC = () => {
   }, []);
 
   const handleAddWater = () => {
-    const amount = 250;
-    const isGoalMetNow = metrics.waterIntake.current < metrics.waterIntake.goal && 
-                         (metrics.waterIntake.current + amount) >= metrics.waterIntake.goal;
-
-    const updated = {
-      ...metrics,
-      waterIntake: {
-        ...metrics.waterIntake,
-        current: Math.min(metrics.waterIntake.current + amount, 5000),
-        logs: [
-          ...metrics.waterIntake.logs,
-          { id: Math.random().toString(), amount, timestamp: new Date().toISOString() },
-        ],
-      },
-    };
-    setMetrics(updated);
+    const { updatedMetrics, isGoalMetNow } = addWaterIntake(metrics, 250);
+    setMetrics(updatedMetrics);
 
     if (isGoalMetNow) {
       speak(t.waterGoalReached, 'success', 6000);
@@ -59,22 +53,11 @@ export const Home: React.FC = () => {
       speak(t.waterLogged, 'success', 4000);
     }
 
-    // Dispatch custom event to notify TopNav
     window.dispatchEvent(new Event('metrics-updated'));
   };
 
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    show: {
-      opacity: 1,
-      transition: { staggerChildren: 0.1 },
-    },
-  };
-
-  const itemVariants = {
-    hidden: { opacity: 0, y: 20 },
-    show: { opacity: 1, y: 0, transition: { type: 'spring' as const, stiffness: 300, damping: 24 } },
-  };
+  const containerVariants = StaggerContainer;
+  const itemVariants = StaggerItem;
 
   const waterProgress = Math.round((metrics.waterIntake.current / metrics.waterIntake.goal) * 100);
   const caloriesProgress = Math.round((metrics.calories.current / metrics.calories.goal) * 100);
@@ -117,9 +100,10 @@ export const Home: React.FC = () => {
         </Card>
       </motion.div>
 
-      {/* Health Overview Widgets */}
+      {/* Health Overview Widgets - Balanced 3-Column Desktop Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {/* BMI Overview */}
+        
+        {/* 1. BMI Overview Card */}
         <motion.div variants={itemVariants}>
           <Card hoverable className="h-full flex flex-col justify-between">
             <div className="space-y-4">
@@ -130,7 +114,7 @@ export const Home: React.FC = () => {
                   </span>
                   <span className="font-semibold text-sm text-gray-500 dark:text-gray-400">{t.bmiTitle}</span>
                 </div>
-                <Award className="w-5 h-5 text-amber-500" />
+                <Award className="w-5 h-5 text-amber-500 animate-bounce" style={{ animationDuration: '3s' }} />
               </div>
               <div>
                 <h3 className="text-3xl font-black font-display text-gray-900 dark:text-white leading-none">
@@ -141,6 +125,7 @@ export const Home: React.FC = () => {
                 </p>
               </div>
             </div>
+            
             <div className="pt-6 border-t border-gray-50 dark:border-slate-800/40 flex items-center justify-between">
               <span className="text-xs text-gray-400 dark:text-gray-500">
                 {language === 'en' ? `Based on ${profile.height} cm, ${profile.weight} kg` : `Berdasarkan ${profile.height} cm, ${profile.weight} kg`}
@@ -155,9 +140,18 @@ export const Home: React.FC = () => {
           </Card>
         </motion.div>
 
-        {/* Water Intake Overview */}
+        {/* 2. Water Intake Card */}
         <motion.div variants={itemVariants}>
-          <Card hoverable className="h-full flex flex-col justify-between">
+          <Card hoverable className="h-full flex flex-col justify-between relative overflow-hidden">
+            
+            {/* Consistency Streak Flame Badge */}
+            <div className="absolute top-3.5 right-3.5 z-20">
+              <div className="streak-badge-pulse flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-orange-500/10 text-orange-600 dark:bg-orange-950/30 dark:text-orange-400 border border-orange-500/20 text-[10px] font-bold select-none">
+                <Flame className="w-3.5 h-3.5 fill-current" />
+                <span>5d</span>
+              </div>
+            </div>
+
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2.5">
@@ -168,6 +162,7 @@ export const Home: React.FC = () => {
                 </div>
                 <span className="text-xs font-bold text-sky-600 dark:text-sky-400">{waterProgress}%</span>
               </div>
+              
               <div className="space-y-2">
                 <h3 className="text-3xl font-black font-display text-gray-900 dark:text-white leading-none">
                   {metrics.waterIntake.current} <span className="text-sm font-medium text-gray-400">/ {metrics.waterIntake.goal} ml</span>
@@ -180,14 +175,18 @@ export const Home: React.FC = () => {
                   />
                 </div>
               </div>
+
+              {/* 7-Day Sparkline Trend Chart */}
+              <MiniTrendChart data={[1500, 2000, 1750, 2250, 1800, 2500, metrics.waterIntake.current]} color="#0ea5e9" height={36} />
             </div>
-            <div className="pt-4 border-t border-gray-50 dark:border-slate-800/40 flex items-center justify-between">
+            
+            <div className="pt-4 border-t border-gray-50 dark:border-slate-800/40 flex items-center justify-between mt-4">
               <span className="text-xs text-gray-400 dark:text-gray-500">
                 {language === 'en' ? `Goal: ${metrics.waterIntake.goal} ml` : `Target: ${metrics.waterIntake.goal} ml`}
               </span>
               <button
                 onClick={handleAddWater}
-                className="text-xs font-bold text-sky-600 dark:text-sky-400 flex items-center gap-1 hover:underline bg-sky-50 hover:bg-sky-100 dark:bg-sky-955/20 dark:hover:bg-sky-955/40 px-2.5 py-1 rounded-xl transition-all"
+                className="text-xs font-bold text-sky-600 dark:text-sky-400 flex items-center gap-1 hover:underline bg-sky-50 hover:bg-sky-100 dark:bg-sky-950/20 dark:hover:bg-sky-950/40 px-2.5 py-1 rounded-xl transition-all"
               >
                 + 250 ml
               </button>
@@ -195,13 +194,22 @@ export const Home: React.FC = () => {
           </Card>
         </motion.div>
 
-        {/* Calories Overview */}
+        {/* 3. Calories Card */}
         <motion.div variants={itemVariants}>
-          <Card hoverable className="h-full flex flex-col justify-between">
+          <Card hoverable className="h-full flex flex-col justify-between relative overflow-hidden">
+            
+            {/* Consistency Streak Flame Badge */}
+            <div className="absolute top-3.5 right-3.5 z-20">
+              <div className="streak-badge-pulse flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-orange-500/10 text-orange-600 dark:bg-orange-950/30 dark:text-orange-400 border border-orange-500/20 text-[10px] font-bold select-none">
+                <Flame className="w-3.5 h-3.5 fill-current" />
+                <span>5d</span>
+              </div>
+            </div>
+
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2.5">
-                  <span className="p-2 rounded-xl bg-amber-50 dark:bg-amber-955/20 text-amber-600 dark:text-amber-400">
+                  <span className="p-2 rounded-xl bg-amber-50 dark:bg-amber-950/20 text-amber-600 dark:text-amber-400">
                     <Flame className="w-5 h-5 fill-current" />
                   </span>
                   <span className="font-semibold text-sm text-gray-500 dark:text-gray-400">{t.dailyCalorie}</span>
@@ -210,6 +218,7 @@ export const Home: React.FC = () => {
                   {metrics.calories.goal - metrics.calories.current} kcal {t.caloriesRemaining}
                 </span>
               </div>
+              
               <div className="space-y-2">
                 <h3 className="text-3xl font-black font-display text-gray-900 dark:text-white leading-none">
                   {metrics.calories.current} <span className="text-sm font-medium text-gray-400">/ {metrics.calories.goal} kcal</span>
@@ -222,8 +231,12 @@ export const Home: React.FC = () => {
                   />
                 </div>
               </div>
+
+              {/* 7-Day Sparkline Trend Chart */}
+              <MiniTrendChart data={[1800, 2200, 1950, 2100, 1900, 2050, metrics.calories.current]} color="#f59e0b" height={36} />
             </div>
-            <div className="pt-6 border-t border-gray-50 dark:border-slate-800/40 flex items-center justify-between">
+            
+            <div className="pt-6 border-t border-gray-50 dark:border-slate-800/40 flex items-center justify-between mt-4">
               <span className="text-xs text-gray-400 dark:text-gray-500">{metrics.calories.logs.length} {t.mealsLogged}</span>
               <button
                 onClick={() => navigate('/dashboard')}
@@ -234,13 +247,51 @@ export const Home: React.FC = () => {
             </div>
           </Card>
         </motion.div>
+
+        {/* 4. Sleep Quality Card */}
+        <motion.div variants={itemVariants}>
+          <SleepCard
+            sleepHours={metrics.sleep.duration}
+            bedTime="22:30"
+            wakeTime="06:00"
+            deepPct={24}
+            lightPct={50}
+            remPct={26}
+            streakDays={5}
+            trendData={[7.0, 7.5, 6.8, 7.2, 8.0, 7.5, metrics.sleep.duration]}
+            onViewDetail={() => navigate('/dashboard')}
+          />
+        </motion.div>
+
+        {/* 5. Workout Card */}
+        <motion.div variants={itemVariants}>
+          <WorkoutCard
+            steps={metrics.exercise.steps}
+            duration={metrics.exercise.duration}
+            logs={metrics.exercise.logs}
+            streakDays={5}
+            language={language}
+            onViewDetail={() => navigate('/dashboard')}
+          />
+        </motion.div>
+
+        {/* 6. Heart Rate Card */}
+        <motion.div variants={itemVariants}>
+          <HeartRateCard
+            bpm={metrics.heartHealth.bpm}
+            bloodPressure={metrics.heartHealth.bloodPressure}
+            history={metrics.heartHealth.history}
+            language={language}
+            onCheck={() => navigate('/chat?topic=vitals')}
+          />
+        </motion.div>
       </div>
 
-      {/* Consultation Quick Links */}
-      <motion.div variants={itemVariants} className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      {/* Consultation Quick Links - 3 Column Grid including AI Insight Card */}
+      <motion.div variants={itemVariants} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {/* Quick Consultation */}
         <Card hoverable className="relative overflow-hidden group flex items-start gap-4">
-          <div className="p-3 rounded-2xl bg-emerald-50 dark:bg-emerald-950/20 text-emerald-600 dark:text-emerald-400 group-hover:scale-110 transition-transform">
+          <div className="p-3 rounded-2xl bg-emerald-50 dark:bg-emerald-950/20 text-emerald-600 dark:text-emerald-400 group-hover:scale-110 transition-transform shrink-0">
             <MessageSquare className="w-6 h-6" />
           </div>
           <div className="space-y-2 flex-1">
@@ -261,7 +312,7 @@ export const Home: React.FC = () => {
 
         {/* Life Recommendations */}
         <Card hoverable className="relative overflow-hidden group flex items-start gap-4">
-          <div className="p-3 rounded-2xl bg-rose-50 dark:bg-rose-955/20 text-rose-600 dark:text-rose-400 group-hover:scale-110 transition-transform">
+          <div className="p-3 rounded-2xl bg-rose-50 dark:bg-rose-950/20 text-rose-600 dark:text-rose-400 group-hover:scale-110 transition-transform shrink-0">
             <Heart className="w-6 h-6 fill-current" />
           </div>
           <div className="space-y-2 flex-1">
@@ -279,6 +330,18 @@ export const Home: React.FC = () => {
             </button>
           </div>
         </Card>
+
+        {/* AI Insight Card */}
+        <motion.div variants={itemVariants}>
+          <AiInsightCard
+            waterIntake={metrics.waterIntake.current}
+            waterGoal={metrics.waterIntake.goal}
+            sleepDuration={metrics.sleep.duration}
+            steps={metrics.exercise.steps}
+            language={language}
+            onNavigateChat={() => navigate('/chat')}
+          />
+        </motion.div>
       </motion.div>
     </motion.div>
   );

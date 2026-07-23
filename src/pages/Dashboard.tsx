@@ -15,6 +15,8 @@ import {
   MessageSquare,
   Pill,
   RotateCcw,
+  Sparkles,
+  Send,
 } from 'lucide-react';
 import { Card } from '../components/Card';
 import { Button } from '../components/Button';
@@ -24,6 +26,7 @@ import { useLocalStorage } from '../hooks/useLocalStorage';
 import type { HealthMetricSummary, WaterLog, CalorieLog, ExerciseLog, SleepLog, BMIRecord, ChatSession } from '../types';
 import { INITIAL_DASHBOARD_DATA, MOCK_CHAT_HISTORY } from '../services/mockData';
 import { useHealthCompanion } from '../context/HealthCompanionContext';
+import { BmiBodyGauge } from '../components/BmiBodyGauge';
 
 interface Medication {
   id: string;
@@ -50,7 +53,11 @@ export const Dashboard: React.FC = () => {
   useEffect(() => {
     const saved = localStorage.getItem('healthmate-chat-sessions');
     if (saved) {
-      setSessions(JSON.parse(saved));
+      try {
+        setSessions(JSON.parse(saved));
+      } catch {
+        setSessions(MOCK_CHAT_HISTORY);
+      }
     } else {
       setSessions(MOCK_CHAT_HISTORY);
     }
@@ -59,7 +66,6 @@ export const Dashboard: React.FC = () => {
   // BMI local inputs state
   const [weightInput, setWeightInput] = useState(metrics.bmi?.weight.toString() || '70');
   const [heightInput, setHeightInput] = useState(metrics.bmi?.height.toString() || '175');
-  const [bmiResult, setBmiResult] = useState<BMIRecord | null>(metrics.bmi);
 
   // Water local inputs state
   const [waterGoalInput, setWaterGoalInput] = useState(metrics.waterIntake.goal.toString());
@@ -100,6 +106,30 @@ export const Dashboard: React.FC = () => {
     notifyMetricsUpdated();
   };
 
+  // Teruskan Laporan Dasbor ke Konsultasi Chat AI
+  const handleForwardReportToConsultation = () => {
+    const bmiInfo = metrics.bmi
+      ? `${metrics.bmi.bmi} kg/m² (${metrics.bmi.category})`
+      : 'Belum dihitung';
+
+    const waterPct = Math.round((metrics.waterIntake.current / metrics.waterIntake.goal) * 100);
+    const calRemaining = metrics.calories.goal - metrics.calories.current;
+
+    const reportPrompt = `[Laporan Kesehatan Dasbor Saya]
+• Indeks Massa Tubuh (IMT): ${bmiInfo} (TB: ${heightInput} cm, BB: ${weightInput} kg)
+• Asupan Air Harian: ${metrics.waterIntake.current} / ${metrics.waterIntake.goal} ml (${waterPct}%)
+• Konsumsi Kalori: ${metrics.calories.current} / ${metrics.calories.goal} kcal (${calRemaining > 0 ? `${calRemaining} kcal tersisa` : 'target terpenuhi'})
+• Durasi Olahraga: ${metrics.exercise.duration} menit (${metrics.exercise.steps} langkah)
+• Durasi Tidur: ${metrics.sleep.duration} jam (${metrics.sleep.quality || 'Baik'})
+• Detak Jantung / Tensi: ${metrics.heartHealth.bpm} BPM (${metrics.heartHealth.bloodPressure})
+
+Halo Medi AI! Mohon berikan analisis komprehensif, evaluasi gaya hidup, serta rekomendasi kesehatan untuk laporan dasbor harian saya di atas.`;
+
+    sessionStorage.setItem('pending_health_report_prompt', reportPrompt);
+    speak('Laporan kesehatan dasbor Anda berhasil diteruskan ke Konsultasi AI!', 'success', 5000);
+    navigate('/chat');
+  };
+
   // BMI calculations
   const calculateBMI = (e: React.FormEvent) => {
     e.preventDefault();
@@ -110,10 +140,11 @@ export const Dashboard: React.FC = () => {
     const heightM = h / 100;
     const bmiVal = parseFloat((w / (heightM * heightM)).toFixed(1));
 
+    // WHO Asia-Pacific 2004 cutoffs (appropriate for Indonesian users)
     let cat = 'Berat Badan Normal';
     if (bmiVal < 18.5) cat = 'Kurus (Underweight)';
-    else if (bmiVal < 25) cat = 'Berat Badan Normal';
-    else if (bmiVal < 30) cat = 'Gemuk (Overweight)';
+    else if (bmiVal < 23.0) cat = 'Berat Badan Normal';
+    else if (bmiVal < 27.5) cat = 'Gemuk (Overweight)';
     else cat = 'Sangat Gemuk (Obese)';
 
     const newRecord: BMIRecord = {
@@ -124,8 +155,6 @@ export const Dashboard: React.FC = () => {
       category: cat,
       timestamp: new Date().toISOString(),
     };
-
-    setBmiResult(newRecord);
 
     const updated = {
       ...metrics,
@@ -386,14 +415,6 @@ export const Dashboard: React.FC = () => {
     show: { opacity: 1, y: 0, transition: { type: 'spring' as const, stiffness: 300, damping: 24 } },
   };
 
-  // BMI Category style utility
-  const getBmiCategoryColor = (cat: string) => {
-    if (cat === 'Berat Badan Normal') return 'border-emerald-500 bg-emerald-50/10 text-emerald-600 dark:text-emerald-400';
-    if (cat === 'Kurus (Underweight)') return 'border-sky-500 bg-sky-50/10 text-sky-600 dark:text-sky-400';
-    if (cat === 'Gemuk (Overweight)') return 'border-amber-500 bg-amber-50/10 text-amber-600 dark:text-amber-400';
-    return 'border-rose-500 bg-rose-50/10 text-rose-600 dark:text-rose-400';
-  };
-
   const getSleepQualityBadge = (qual: string) => {
     if (qual === 'Excellent' || qual === 'Sangat Baik') return 'success';
     if (qual === 'Good' || qual === 'Baik') return 'info';
@@ -431,17 +452,58 @@ export const Dashboard: React.FC = () => {
       {/* Daily Reset Bar */}
       <div className="flex items-center justify-between px-1">
         <p className="text-xs text-gray-400 dark:text-gray-500">
-          Catat aktivitas kesehatan Anda hari ini
+          Catat dan pantau aktivitas kesehatan Anda hari ini
         </p>
-        <button
-          onClick={handleResetToday}
-          className="flex items-center gap-1.5 text-xs font-semibold text-gray-500 hover:text-rose-500 dark:text-gray-400 dark:hover:text-rose-400 transition-colors"
-          title="Reset semua data hari ini"
-        >
-          <RotateCcw className="w-3.5 h-3.5" />
-          Reset Hari Ini
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={handleForwardReportToConsultation}
+            className="flex items-center gap-1.5 text-xs font-bold text-emerald-600 hover:text-emerald-500 dark:text-emerald-400 dark:hover:text-emerald-300 transition-colors bg-emerald-50 dark:bg-emerald-950/30 px-3 py-1.5 rounded-xl border border-emerald-500/20"
+            title="Teruskan seluruh laporan dasbor ke Chat AI"
+          >
+            <Sparkles className="w-3.5 h-3.5" />
+            Teruskan ke Chat AI
+          </button>
+          <button
+            onClick={handleResetToday}
+            className="flex items-center gap-1.5 text-xs font-semibold text-gray-500 hover:text-rose-500 dark:text-gray-400 dark:hover:text-rose-400 transition-colors"
+            title="Reset semua data hari ini"
+          >
+            <RotateCcw className="w-3.5 h-3.5" />
+            Reset Hari Ini
+          </button>
+        </div>
       </div>
+
+      {/* ── FORWARD DASHBOARD REPORT TO AI BANNER ── */}
+      <motion.div
+        variants={itemVariants}
+        className="relative overflow-hidden rounded-2xl p-5 bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 text-white shadow-lg border border-emerald-500/30 flex flex-col md:flex-row md:items-center justify-between gap-4"
+      >
+        <div className="flex items-center gap-3.5 z-10">
+          <div className="p-3 rounded-2xl bg-white/15 backdrop-blur-md text-white shrink-0">
+            <MessageSquare className="w-6 h-6" />
+          </div>
+          <div>
+            <h3 className="text-base font-extrabold font-display leading-snug">
+              Konsultasikan Laporan Dasbor ke Chat AI
+            </h3>
+            <p className="text-xs text-emerald-100/90 font-medium">
+              Kirim ringkasan riwayat IMT, hidrasi air, kalori, tidur, dan olahraga Anda langsung ke Medi AI untuk analisis medis personal.
+            </p>
+          </div>
+        </div>
+
+        <button
+          onClick={handleForwardReportToConsultation}
+          className="z-10 shrink-0 px-5 py-2.5 rounded-xl bg-white text-emerald-800 font-bold text-xs hover:bg-emerald-50 transition-all flex items-center justify-center gap-2 shadow-md hover:scale-[1.02] active:scale-[0.98]"
+        >
+          <Send className="w-3.5 h-3.5 text-emerald-600" />
+          <span>Teruskan Laporan Sekarang</span>
+        </button>
+
+        {/* Decorative Glow Background */}
+        <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-400/20 rounded-full blur-3xl -translate-y-12 translate-x-12 pointer-events-none" />
+      </motion.div>
 
       {/* ── Streak Gamification Banner ─────────────────────────────── */}
       <motion.div
@@ -513,57 +575,54 @@ export const Dashboard: React.FC = () => {
         <motion.div variants={itemVariants}>
           <Card className="h-full flex flex-col justify-between">
             <div className="space-y-6">
-              <div className="flex items-center gap-3">
-                <span className="p-2.5 rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
-                  <Activity className="w-6 h-6" />
-                </span>
-                <div>
-                  <h3 className="text-lg font-bold font-display text-gray-900 dark:text-white">Indeks Massa Tubuh (IMT / BMI)</h3>
-                  <p className="text-xs text-gray-400 dark:text-gray-500">Hitung klasifikasi berat badan Anda secara instan</p>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-gray-100 dark:border-slate-800">
+                <div className="flex items-center gap-3">
+                  <span className="p-2.5 rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+                    <Activity className="w-6 h-6" />
+                  </span>
+                  <div>
+                    <h3 className="text-lg font-bold font-display text-gray-900 dark:text-white">Kalkulator & Peta Anatomi IMT (BMI)</h3>
+                    <p className="text-xs text-gray-400 dark:text-gray-500">Klasifikasi massa tubuh & estimasi komposisi lemak tubuh WHO Asia-Pasifik</p>
+                  </div>
                 </div>
+
+                {/* Inline Quick Calculation Input Form */}
+                <form onSubmit={calculateBMI} className="flex items-center gap-3 flex-wrap sm:flex-nowrap">
+                  <div className="w-28">
+                    <Input
+                      label="BB (kg)"
+                      type="number"
+                      min="30"
+                      max="300"
+                      step="0.1"
+                      value={weightInput}
+                      onChange={(e) => setWeightInput(e.target.value)}
+                      required
+                    />
+                  </div>
+                  <div className="w-28">
+                    <Input
+                      label="TB (cm)"
+                      type="number"
+                      min="100"
+                      max="250"
+                      value={heightInput}
+                      onChange={(e) => setHeightInput(e.target.value)}
+                      required
+                    />
+                  </div>
+                  <Button type="submit" className="py-2.5 px-4 mt-5 rounded-2xl shrink-0">
+                    Hitung
+                  </Button>
+                </form>
               </div>
 
-              <form onSubmit={calculateBMI} className="grid grid-cols-2 gap-4">
-                <Input
-                  label="Berat Badan (kg)"
-                  type="number"
-                  min="30"
-                  max="300"
-                  step="0.1"
-                  value={weightInput}
-                  onChange={(e) => setWeightInput(e.target.value)}
-                  required
-                />
-                <Input
-                  label="Tinggi Badan (cm)"
-                  type="number"
-                  min="100"
-                  max="250"
-                  value={heightInput}
-                  onChange={(e) => setHeightInput(e.target.value)}
-                  required
-                />
-                <Button type="submit" className="col-span-2 py-2.5 mt-2 rounded-2xl">
-                  Hitung BMI
-                </Button>
-              </form>
+              {/* BmiBodyGauge Component with Arc Gauge & SVG Silhouette */}
+              <BmiBodyGauge
+                heightCm={parseFloat(heightInput) || 170}
+                weightKg={parseFloat(weightInput) || 70}
+              />
             </div>
-
-            {bmiResult && (
-              <div className={`mt-6 p-5 border-l-4 rounded-r-2xl flex flex-col md:flex-row items-start md:items-center justify-between gap-4 transition-all duration-200 ${getBmiCategoryColor(bmiResult.category)}`}>
-                <div className="space-y-1">
-                  <span className="text-[10px] font-bold uppercase tracking-wider opacity-60">Hasil Skor BMI</span>
-                  <h4 className="text-4xl font-black font-display leading-none">{bmiResult.bmi}</h4>
-                  <p className="text-xs font-semibold">Kategori: {bmiResult.category}</p>
-                </div>
-                <div className="text-xs max-w-[15rem] leading-relaxed opacity-90">
-                  {bmiResult.category === 'Berat Badan Normal' && 'Luar biasa! Berat badan Anda berada dalam kategori sehat. Jaga konsumsi air dan aktivitas fisik harian Anda.'}
-                  {bmiResult.category === 'Kurus (Underweight)' && 'Rekomendasi perawatan mandiri: Pertimbangkan untuk berkonsultasi dengan ahli gizi guna merancang pola makan tinggi kalori dan nutrisi.'}
-                  {bmiResult.category === 'Gemuk (Overweight)' && 'Informasi umum: Meningkatkan intensitas latihan fisik kardio dan membatasi asupan kalori dapat membantu mencapai berat ideal.'}
-                  {bmiResult.category === 'Sangat Gemuk (Obese)' && 'Pemberitahuan: Kami sarankan berkonsultasi dengan dokter untuk evaluasi menyeluruh dan menjaga kesehatan pembuluh darah.'}
-                </div>
-              </div>
-            )}
           </Card>
         </motion.div>
 
@@ -799,7 +858,7 @@ export const Dashboard: React.FC = () => {
                 metrics.exercise.logs.map((log) => (
                   <div key={log.id} className="flex items-center justify-between py-2 px-3 bg-gray-50 dark:bg-slate-900/50 border border-gray-100 dark:border-slate-800/60 rounded-xl text-xs font-semibold">
                     <div className="flex flex-col">
-                      <span className="text-gray-800 dark:text-gray-250 font-bold">{log.activityType}</span>
+                      <span className="text-gray-800 dark:text-gray-300 font-bold">{log.activityType}</span>
                       <span className="text-[10px] text-gray-400">{log.duration} menit {log.steps > 0 ? `• ${log.steps} langkah` : ''}</span>
                     </div>
                     <button
@@ -851,7 +910,7 @@ export const Dashboard: React.FC = () => {
                   required
                 />
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-xs font-semibold text-gray-500 dark:text-gray-450 ml-1">Kualitas</label>
+                  <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 ml-1">Kualitas</label>
                   <select
                     value={sleepQuality}
                     onChange={(e: any) => setSleepQuality(e.target.value)}
@@ -932,7 +991,7 @@ export const Dashboard: React.FC = () => {
                 <div key={idx} className="flex items-center justify-between py-2 px-3 bg-gray-50 dark:bg-slate-900/50 border border-gray-100 dark:border-slate-800/60 rounded-xl text-xs font-semibold">
                   <span className="text-gray-700 dark:text-gray-300">Nadi: {h.bpm} bpm</span>
                   <div className="flex items-center gap-3">
-                    <span className="text-rose-600 dark:text-rose-455 font-bold">{h.bp} mmHg</span>
+                    <span className="text-rose-600 dark:text-rose-400 font-bold">{h.bp} mmHg</span>
                     <span className="text-[10px] text-gray-400">
                       {new Date(h.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                     </span>
@@ -949,7 +1008,7 @@ export const Dashboard: React.FC = () => {
             <div className="space-y-6">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <span className="p-2.5 rounded-2xl bg-indigo-500/10 text-indigo-650 dark:text-indigo-400">
+                  <span className="p-2.5 rounded-2xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400">
                     <Pill className="w-6 h-6" />
                   </span>
                   <div>
@@ -972,7 +1031,7 @@ export const Dashboard: React.FC = () => {
                       ${
                         med.taken
                           ? 'border-emerald-200 bg-emerald-50/15 dark:border-slate-800 dark:bg-slate-900/30 opacity-75'
-                          : 'border-gray-100 bg-gray-50/20 dark:border-slate-850 dark:bg-slate-950/15 hover:bg-gray-50/60 dark:hover:bg-slate-900/10'
+                          : 'border-gray-100 bg-gray-50/20 dark:border-slate-800 dark:bg-slate-950/15 hover:bg-gray-50/60 dark:hover:bg-slate-900/10'
                       }
                     `}
                   >
@@ -1016,7 +1075,7 @@ export const Dashboard: React.FC = () => {
             <div className="space-y-6">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <span className="p-2.5 rounded-2xl bg-emerald-500/10 text-emerald-650 dark:text-emerald-450">
+                  <span className="p-2.5 rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
                     <MessageSquare className="w-6 h-6" />
                   </span>
                   <div>
@@ -1037,7 +1096,7 @@ export const Dashboard: React.FC = () => {
                       {new Date(latestSession.updatedAt).toLocaleDateString([], { month: 'short', day: 'numeric' })}
                     </span>
                   </div>
-                  <p className="text-xs text-gray-450 dark:text-gray-500 line-clamp-3 leading-relaxed">
+                  <p className="text-xs text-gray-400 dark:text-gray-500 line-clamp-3 leading-relaxed">
                     {latestSession.messages.length > 0
                       ? latestSession.messages[latestSession.messages.length - 1].text.replace(/[#*>]/g, '')
                       : 'Belum ada obrolan aktif.'}

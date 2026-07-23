@@ -1,11 +1,38 @@
-# Environment & secrets
+# ==============================================================================
+# HealthMate AI — Production-Grade .gitignore
+# Open Source Security & Privacy Rules
+# ==============================================================================
+
+# Secrets, Environment Variables & API Keys
 .env
 .env.*
-env..txt
 *.env
+env..txt
+*.key
+*.pem
+secrets/
 
-# Logs
-logs
+# Internal Architecture, Planning & Agent Artifacts
+.agents/
+.claude/
+.gemini/
+BigPlanAndWisdom.md
+Plan.md.txt
+gemini_test_result.txt
+stress_test_results_data.json
+
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build & Dist Artifacts
+dist/
+dist-ssr/
+build/
+*.tsbuildinfo
+
+# Logs & Benchmark Dumps
+logs/
 *.log
 npm-debug.log*
 yarn-debug.log*
@@ -13,18 +40,26 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
-node_modules
-dist
-dist-ssr
-*.local
-
-# Editor directories and files
+# OS & Editor Files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+.idea/
 .vscode/*
 !.vscode/extensions.json
-.idea
-.DS_Store
+!.vscode/settings.json
 *.suo
 *.ntvs*
 *.njsproj
 *.sln
 *.sw?
+
+# Temporary & Test Files
+coverage/
+.nyc_output/
+*.tmp
+*.temp

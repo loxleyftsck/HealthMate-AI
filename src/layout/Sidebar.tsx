@@ -37,7 +37,7 @@ interface SidebarProps {
 export const Sidebar: React.FC<SidebarProps> = ({ onNewChat, isOpen = false, onClose }) => {
   const { theme, setTheme } = useTheme();
   const { user, logout } = useAuth();
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const location = useLocation();
   const navigate = useNavigate();
   const [sessions, setSessions] = useState<ChatSession[]>([]);
@@ -69,7 +69,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onNewChat, isOpen = false, onC
       window.removeEventListener('storage', loadSessions);
       window.removeEventListener('chat-sessions-updated', loadSessions);
     };
-  }, [location]);
+  }, []);
 
   const handleNewChatClick = () => {
     if (onNewChat) {
@@ -191,7 +191,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onNewChat, isOpen = false, onC
                     <button
                       onClick={(e) => handleDeleteSession(session.id, e)}
                       className="absolute right-2 p-1.5 rounded-lg text-gray-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/30 opacity-0 group-hover:opacity-100 transition-opacity z-10"
-                      title={t.language === 'en' ? 'Delete Consultation' : 'Hapus Konsultasi'}
+                      title={language === 'en' ? 'Delete Consultation' : 'Hapus Konsultasi'}
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>
@@ -206,7 +206,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onNewChat, isOpen = false, onC
       {/* Sidebar Footer: Theme Toggle & User Info */}
       <div className="p-4 border-t border-gray-100 dark:border-slate-800/50 space-y-4">
         {/* Modern Theme Switcher Segment */}
-        <div className="flex items-center justify-between p-1 rounded-2xl bg-gray-50 dark:bg-slate-950/50 border border-gray-100 dark:border-slate-850">
+        <div className="flex items-center justify-between p-1 rounded-2xl bg-gray-50 dark:bg-slate-950/50 border border-gray-100 dark:border-slate-800">
           {(['light', 'dark', 'system'] as const).map((themeType) => (
             <button
               key={themeType}
@@ -214,7 +214,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onNewChat, isOpen = false, onC
               className={`flex-1 flex justify-center py-1.5 rounded-xl transition-all duration-200
                 ${
                   theme === themeType
-                    ? 'bg-white dark:bg-slate-850 text-emerald-600 dark:text-emerald-400 shadow-sm'
+                    ? 'bg-white dark:bg-slate-800 text-emerald-600 dark:text-emerald-400 shadow-sm'
                     : 'text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300'
                 }
               `}
@@ -228,7 +228,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onNewChat, isOpen = false, onC
         </div>
 
         {/* User Card */}
-        <div className="flex items-center justify-between p-2 rounded-2xl hover:bg-gray-50 dark:hover:bg-slate-850 transition-colors duration-200 group">
+        <div className="flex items-center justify-between p-2 rounded-2xl hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors duration-200 group">
           <div className="flex items-center gap-3 min-w-0">
             <Avatar src={user.avatar} name={user.name} size="md" />
             <div className="flex flex-col min-w-0">

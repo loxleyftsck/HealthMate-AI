@@ -64,7 +64,7 @@ export const Settings: React.FC = () => {
       };
 
       const payloadStr = JSON.stringify(localData);
-      const encrypted = encryptData(payloadStr, secretSyncKey);
+      const encrypted = await encryptData(payloadStr, secretSyncKey);
 
       if (!cloudEndpoint || cloudEndpoint.includes('mock') || cloudEndpoint.includes('localhost')) {
         await new Promise((resolve) => setTimeout(resolve, 800));
@@ -103,7 +103,7 @@ export const Settings: React.FC = () => {
         return;
       }
 
-      const decryptedStr = decryptData(encrypted, secretSyncKey);
+      const decryptedStr = await decryptData(encrypted, secretSyncKey);
       const parsed = JSON.parse(decryptedStr);
 
       if (!parsed.profile || !parsed.settings) {
@@ -231,7 +231,7 @@ export const Settings: React.FC = () => {
     >
       {/* Toast Feedback */}
       {savedFeedback && (
-        <div className="fixed bottom-6 right-6 z-55 flex items-center gap-2 bg-emerald-600 text-white px-5 py-3 rounded-2xl shadow-xl font-bold text-sm">
+        <div className="fixed bottom-6 right-6 z-50 flex items-center gap-2 bg-emerald-600 text-white px-5 py-3 rounded-2xl shadow-xl font-bold text-sm">
           <span>✓</span>
           <span>{savedFeedback}</span>
         </div>
@@ -335,7 +335,7 @@ export const Settings: React.FC = () => {
                   logout();
                   navigate('/');
                 }}
-                className="px-4 py-2.5 rounded-2xl bg-rose-50 hover:bg-rose-100 text-rose-600 dark:bg-rose-955/20 dark:hover:bg-rose-955/35 dark:text-rose-400 font-bold text-sm transition-all duration-200"
+                className="px-4 py-2.5 rounded-2xl bg-rose-50 hover:bg-rose-100 text-rose-600 dark:bg-rose-950/20 dark:hover:bg-rose-950/30 dark:text-rose-400 font-bold text-sm transition-all duration-200"
               >
                 {t.exitAccount}
               </button>
@@ -455,8 +455,8 @@ export const Settings: React.FC = () => {
                   className={`flex items-start justify-between p-4 rounded-2xl border transition-all duration-205
                     ${
                       isEnabled
-                        ? 'border-emerald-250 bg-emerald-50/5 dark:border-slate-800/80 dark:bg-slate-900/30'
-                        : 'border-gray-100 bg-gray-50/20 dark:border-slate-850 dark:bg-slate-955/20 opacity-70'
+                        ? 'border-emerald-500/20 bg-emerald-50/5 dark:border-slate-800/80 dark:bg-slate-900/30'
+                        : 'border-gray-100 bg-gray-50/20 dark:border-slate-800 dark:bg-slate-950/20 opacity-70'
                     }
                   `}
                 >
@@ -547,7 +547,7 @@ export const Settings: React.FC = () => {
           <div className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-semibold text-gray-500 dark:text-gray-450 ml-1">{t.syncMode}</label>
+                <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 ml-1">{t.syncMode}</label>
                 <select
                   value={syncMode}
                   onChange={(e) => setSyncMode(e.target.value as any)}
@@ -638,7 +638,7 @@ export const Settings: React.FC = () => {
                 onChange={(e) => setApiKey(e.target.value)}
               />
               <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-semibold text-gray-500 dark:text-gray-450 ml-1">{t.geminiModel}</label>
+                <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 ml-1">{t.geminiModel}</label>
                 <select
                   value={model}
                   onChange={(e) => setModel(e.target.value)}
@@ -681,9 +681,9 @@ export const Settings: React.FC = () => {
 
       {/* 5. ABOUT & MEDICAL DISCLAIMER */}
       <motion.div variants={itemVariants}>
-        <Card className="border-rose-100 bg-rose-50/5 dark:border-rose-955/20">
+        <Card className="border-rose-100 bg-rose-50/5 dark:border-rose-950/20">
           <div className="flex items-center gap-3 mb-4">
-            <span className="p-2.5 rounded-2xl bg-rose-500/10 text-rose-600 dark:text-rose-455">
+            <span className="p-2.5 rounded-2xl bg-rose-500/10 text-rose-600 dark:text-rose-400">
               <ShieldAlert className="w-5 h-5 animate-pulse" />
             </span>
             <div>

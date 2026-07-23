@@ -1,12 +1,284 @@
-export const getMockResponse = (userPrompt: string, enabledPlugins: string[] = []): Promise<{ text: string; pluginUsed?: string }> => {
+export const getMockResponse = (
+  userPrompt: string,
+  enabledPlugins: string[] = [],
+  conversationHistory: any[] = [],
+  attachedFile?: any | null
+): Promise<{
+  text: string;
+  pluginUsed?: string;
+  functionCall?: {
+    name: string;
+    args: any;
+  };
+}> => {
   const allPluginsEnabled = enabledPlugins.length === 0;
   const hasPlugin = (name: string) => allPluginsEnabled || enabledPlugins.includes(name);
 
   return new Promise((resolve) => {
-    const delay = 800 + Math.random() * 700;
+    const delay = 600 + Math.random() * 400; // Sedikit lebih cepat untuk responsivitas mock
 
     setTimeout(() => {
       const prompt = userPrompt.toLowerCase();
+
+      // A. Tangani offline double-turn (percakapan setelah tool dieksekusi)
+      if (!userPrompt.trim() && conversationHistory && conversationHistory.length > 0) {
+        const lastMsg = conversationHistory[conversationHistory.length - 1];
+        const lastPart = lastMsg.parts?.[0];
+        if (lastPart && 'functionResponse' in lastPart) {
+          const responseName = lastPart.functionResponse.name;
+          const responseData = lastPart.functionResponse.response;
+          let text = 'Data berhasil dicatat ke dasbor Anda!';
+          if (responseData && responseData.status === 'success') {
+            if (responseName === 'add_water') {
+              text = `Saya telah mencatat asupan air minum Anda sebesar **${responseData.added} ml**. Total asupan air Anda hari ini menjadi **${responseData.newTotal} ml** (Target: ${responseData.goal} ml). Jaga terus hidrasi tubuh Anda!`;
+            } else if (responseName === 'add_calorie') {
+              text = `Makanan **"${responseData.foodName}"** sebesar **${responseData.added} kcal** berhasil dicatat ke kategori **${responseData.mealType}**. Total asupan kalori hari ini adalah **${responseData.newTotal} kcal** dari target **${responseData.goal} kcal**.`;
+            } else if (responseName === 'add_exercise') {
+              text = `Aktivitas **"${responseData.activityType}"** selama **${responseData.duration} menit** berhasil disimpan. Total durasi olahraga Anda hari ini adalah **${responseData.newTotalDuration} menit** dengan total **${responseData.newSteps} langkah**. Bagus sekali!`;
+            } else if (responseName === 'add_sleep') {
+              text = `Tidur selama **${responseData.duration} jam** dengan kualitas **"${responseData.quality}"** telah dicatat. Pastikan Anda tidur cukup secara konsisten ya!`;
+            } else if (responseName === 'calculate_bmi') {
+              text = `IMT Anda telah dihitung! Nilai BMI Anda adalah **${responseData.bmi}** yang termasuk kategori **${responseData.category}** (Berat: ${responseData.weight} kg, Tinggi: ${responseData.height} cm).`;
+            }
+          }
+          resolve({ text });
+          return;
+        }
+      }
+
+      // C. Tangani analisis makanan via gambar (Offline Vision Mock)
+      if (attachedFile && hasPlugin('Nutrition')) {
+        const baseName = attachedFile.name ? attachedFile.name.split('.')[0] : 'Makanan';
+        const cleanFoodName = baseName.replace(/[-_]/g, ' ');
+        const amount = 350; // default calorie estimate
+        const mealType = 'snack';
+        resolve({
+          text: '',
+          functionCall: {
+            name: 'add_calorie',
+            args: { foodName: cleanFoodName, amount, mealType }
+          }
+        });
+        return;
+      }
+
+      // B. Deteksi kata kunci untuk memicu Tool Call secara luring (Regex Mock Parser)
+      
+      // 0. Forwarded Dashboard Health Report Analysis (Terapkan SEBELUM Tool Call Triggers)
+      const isJournalQuery = prompt.includes('refrensi') || prompt.includes('referensi') || prompt.includes('journal') || prompt.includes('jurnal') || prompt.includes('literatur') || prompt.includes('dapus');
+      const isReportPrompt = prompt.includes('[laporan kesehatan dasbor saya]') || prompt.includes('laporan kesehatan dasbor') || prompt.includes('analisis dasbor harian');
+      
+      if (isReportPrompt || (isJournalQuery && prompt.includes('dasbor'))) {
+        const text = `### 📚 Referensi Jurnal Medis & Analisis Klinis Laporan Kesehatan Dasbor
+
+Berikut adalah evaluasi medis terstruktur beserta **Daftar Jurnal Ilmiah Medis Peer-Reviewed & Panduan WHO** yang menjadi acuan ilmiah untuk 5 pilar metrik pada **[Laporan Kesehatan Dasbor Saya]**:
+
+---
+
+#### 1. ⚖️ Komposisi Tubuh & IMT (BMI)
+- **Status Evaluasi:** Indeks massa tubuh Anda dipantau sesuai standar kualifikasi metabolik populasi Asia.
+- **📖 Referensi Jurnal Utama:**
+  - **WHO Expert Consultation (2004).** *Appropriate body-mass index for Asian populations and its implications for policy and intervention strategies.* **The Lancet**, 363(9403), 157–163. DOI: [10.1016/S0140-6736(03)15268-3](https://doi.org/10.1016/S0140-6736(03)15268-3).
+  - **WHO Regional Office for the Western Pacific (2000).** *The Asia-Pacific perspective: Redefining obesity and its treatment.* Health Communications Australia.
+
+#### 2. 💧 Hidrasi & Keseimbangan Cairan Tubuh
+- **Status Evaluasi:** Pemenuhan kebutuhan air minum harian esensial untuk filtrasi glomerulus ginjal dan regulasi osmotik sel.
+- **📖 Referensi Jurnal Utama:**
+  - **Popkin, B. M., D'Anci, K. E., & Rosenberg, I. H. (2010).** *Water, hydration, and health.* **Nutrition Reviews**, 68(8), 439–458. DOI: [10.1111/j.1753-4887.2010.00304.x](https://doi.org/10.1111/j.1753-4887.2010.00304.x).
+  - **EFSA Panel on Dietetic Products, Nutrition, and Allergies (2010).** *Scientific Opinion on Dietary Reference Values for water.* **EFSA Journal**, 8(3), 1459.
+
+#### 3. 🍎 Keseimbangan Energi & Nutrisi Kalori
+- **Status Evaluasi:** Keseimbangan asupan energi harian dengan *Total Daily Energy Expenditure* (TDEE) mendukung pemeliharaan massa otot bebas lemak.
+- **📖 Referensi Jurnal Utama:**
+  - **Hall, K. D., et al. (2012).** *Energy balance and its components: implications for body weight regulation.* **The American Journal of Clinical Nutrition**, 95(4), 989–994. DOI: [10.3945/ajcn.112.036350](https://doi.org/10.3945/ajcn.112.036350).
+  - **FAO/WHO/UNU Expert Consultation (2004).** *Human energy requirements.* WHO Technical Report Series No. 1.
+
+#### 4. 🏃 Kebugaran & Aktivitas Fisik
+- **Status Evaluasi:** Aktivitas kardio dan akumulasi langkah harian terbukti klinis menurunkan risiko kardiometabolik.
+- **📖 Referensi Jurnal Utama:**
+  - **Bull, F. C., et al. (2020).** *World Health Organization 2020 guidelines on physical activity and sedentary behaviour.* **British Journal of Sports Medicine**, 54(24), 1451–1462. DOI: [10.1136/bjsports-2020-102955](https://doi.org/10.1136/bjsports-2020-102955).
+  - **Lee, I. M., et al. (2012).** *Effect of physical inactivity on major non-communicable diseases worldwide.* **The Lancet**, 380(9838), 219–229. DOI: [10.1016/S0140-6736(12)61031-9](https://doi.org/10.1016/S0140-6736(12)61031-9).
+
+#### 5. 💤 Siklus Pemulihan & Kualitas Tidur
+- **Status Evaluasi:** Durasi tidur ideal (7-9 jam/malam) mengoptimalkan pembersihan limfatik otak (*Glymphatic Clearance*) dan imunitas seluler.
+- **📖 Referensi Jurnal Utama:**
+  - **Hirshkowitz, M., et al. (2015).** *National Sleep Foundation’s sleep time duration recommendations: methodology and results summary.* **Sleep Health**, 1(1), 40–43. DOI: [10.1016/j.sleh.2014.12.010](https://doi.org/10.1016/j.sleh.2014.12.010).
+  - **Besedovsky, L., Lange, T., & Haack, M. (2019).** *The sleep-immune crosstalk in health and disease.* **Physiological Reviews**, 99(3), 1325–1380. DOI: [10.1152/physrev.00010.2018](https://doi.org/10.1152/physrev.00010.2018).
+
+---
+
+### 💡 Ringkasan Implikasi Klinis:
+Semua indikator pada **[Laporan Kesehatan Dasbor Saya]** dirancang mengikuti ambang batas rekomendasi kedokteran pencegahan (*Preventive Medicine*) berbasis bukti (*Evidence-Based Medicine*).
+
+> [!NOTE]
+> *Seluruh referensi di atas dipublikasikan dalam jurnal medis internasional terindeks PubMed/MEDLINE.*`;
+
+        resolve({ text });
+        return;
+      }
+
+      // 1. Air (Water)
+      if (hasPlugin('Water') && !isReportPrompt) {
+        const waterMatch = prompt.match(/(?:minum|drink|air|water)\s*(\d+)/i) || prompt.match(/(\d+)\s*(?:ml|mili|gelas|glass)/i);
+        if (waterMatch) {
+          let amount = parseInt(waterMatch[1]);
+          if (prompt.includes('gelas') || prompt.includes('glass')) {
+            amount = amount * 250;
+          }
+          if (amount > 0) {
+            resolve({
+              text: '',
+              functionCall: {
+                name: 'add_water',
+                args: { amount }
+              }
+            });
+            return;
+          }
+        }
+      }
+
+      // 2. Makanan / Kalori (Calories)
+      if (hasPlugin('Nutrition')) {
+        const calorieMatch = prompt.match(/(\d+)\s*(?:kalori|kcal|calories)/i);
+        if (calorieMatch) {
+          const amount = parseInt(calorieMatch[1]);
+          let foodName = 'Makanan';
+          const foodMatch = prompt.match(/(?:makan|eat|konsumsi)\s+([a-zA-Z\s\u00C0-\u017F]+?)(?:\s*(?:sebesar|sekitar)?\s*\d+|\s*$)/i);
+          if (foodMatch && foodMatch[1].trim()) {
+            foodName = foodMatch[1].trim();
+          }
+          
+          let mealType: 'breakfast' | 'lunch' | 'dinner' | 'snack' = 'lunch';
+          if (prompt.includes('pagi') || prompt.includes('sarapan') || prompt.includes('breakfast')) mealType = 'breakfast';
+          else if (prompt.includes('malam') || prompt.includes('dinner')) mealType = 'dinner';
+          else if (prompt.includes('cemilan') || prompt.includes('snack') || prompt.includes('sore') || prompt.includes('kopi')) mealType = 'snack';
+
+          resolve({
+            text: '',
+            functionCall: {
+              name: 'add_calorie',
+              args: { foodName, amount, mealType }
+            }
+          });
+          return;
+        }
+      }
+
+      // 3. Olahraga / Aktivitas Fisik (Workout)
+      if (hasPlugin('Workout')) {
+        const isSymptomContext = prompt.includes('pusing') || prompt.includes('sakit') || prompt.includes('nyeri') || prompt.includes('mendingan') || prompt.includes('gejala') || prompt.includes('keluhan') || prompt.includes('kemudian') || prompt.includes('lalu') || prompt.includes('merasa') || prompt.includes('terasa') || prompt.includes('agak');
+        const hasExplicitWorkoutKeyword = prompt.includes('olahraga') || prompt.includes('workout') || prompt.includes('latihan') || prompt.includes('lari') || prompt.includes('run') || prompt.includes('jalan') || prompt.includes('walk') || prompt.includes('sepeda') || prompt.includes('cycle') || prompt.includes('senam') || prompt.includes('gym') || prompt.includes('beban') || prompt.includes('renang') || prompt.includes('swim') || prompt.includes('jogging') || prompt.includes('pushup') || prompt.includes('situp') || prompt.includes('treadmill') || prompt.includes('aerobik');
+
+        const durationMatch = prompt.match(/(\d+)\s*(?:menit|min|minute)/i);
+        if (durationMatch && hasExplicitWorkoutKeyword && !isSymptomContext) {
+          const duration = parseInt(durationMatch[1]);
+          const stepsMatch = prompt.match(/(\d+)\s*(?:langkah|step)/i);
+          const steps = stepsMatch ? parseInt(stepsMatch[1]) : undefined;
+
+          let activityType = 'Olahraga';
+          if (prompt.includes('lari') || prompt.includes('run') || prompt.includes('jogging')) activityType = 'Lari';
+          else if (prompt.includes('jalan') || prompt.includes('walk')) activityType = 'Jalan Kaki';
+          else if (prompt.includes('sepeda') || prompt.includes('cycle')) activityType = 'Bersepeda';
+          else if (prompt.includes('senam') || prompt.includes('aerobik')) activityType = 'Senam';
+          else if (prompt.includes('gym') || prompt.includes('beban')) activityType = 'Angkat Beban';
+          else {
+            const actMatch = prompt.match(/(?:olahraga|workout|latihan)\s+([a-zA-Z\s]+?)(?:\s*\d+|\s*$)/i);
+            if (actMatch && actMatch[1].trim()) {
+              activityType = actMatch[1].trim();
+            }
+          }
+
+          resolve({
+            text: '',
+            functionCall: {
+              name: 'add_exercise',
+              args: { activityType, duration, steps }
+            }
+          });
+          return;
+        }
+      }
+
+      // 4. Tidur (Sleep)
+      if (hasPlugin('Sleep')) {
+        const sleepMatch = prompt.match(/(\d+(?:\.\d+)?)\s*(?:jam|hour)/i);
+        if (sleepMatch) {
+          const duration = parseFloat(sleepMatch[1]);
+          let quality: 'Excellent' | 'Good' | 'Fair' | 'Poor' = 'Good';
+          if (prompt.includes('nyenyak') || prompt.includes('puas') || prompt.includes('segar') || prompt.includes('excellent')) {
+            quality = 'Excellent';
+          } else if (prompt.includes('buruk') || prompt.includes('kurang') || prompt.includes('poor') || prompt.includes('terbangun')) {
+            quality = 'Poor';
+          }
+
+          resolve({
+            text: '',
+            functionCall: {
+              name: 'add_sleep',
+              args: { duration, quality }
+            }
+          });
+          return;
+        }
+      }
+
+      // 5. BMI (Tinggi & Berat Badan)
+      if (hasPlugin('BMI') && (prompt.includes('bmi') || prompt.includes('imt') || (prompt.includes('berat') && prompt.includes('tinggi')))) {
+        const weightMatch = prompt.match(/(?:berat|weight|bb)\s*(\d+(?:\.\d+)?)/i);
+        const heightMatch = prompt.match(/(?:tinggi|height|tb)\s*(\d+)/i);
+        if (weightMatch && heightMatch) {
+          const weight = parseFloat(weightMatch[1]);
+          const height = parseFloat(heightMatch[1]);
+          resolve({
+            text: '',
+            functionCall: {
+              name: 'calculate_bmi',
+              args: { weight, height }
+            }
+          });
+          return;
+        }
+      }
+
+      // Fallback ke tanggapan teks standar jika tidak ada pemicu tool call
+
+      // 0. Forwarded Dashboard Health Report Analysis
+      if (prompt.includes('[laporan kesehatan dasbor saya]') || prompt.includes('laporan kesehatan dasbor') || prompt.includes('analisis dasbor harian')) {
+        const text = `### 📊 Analisis Komprehensif Laporan Kesehatan Dasbor
+
+Terima kasih telah meneruskan laporan kesehatan harian Anda ke **HealthMate AI**! Berdasarkan data real-time dasbor Anda, berikut adalah evaluasi klinis dan analisis gaya hidup komprehensif:
+
+---
+
+#### 1. ⚖️ Komposisi Tubuh & IMT (BMI)
+- **Evaluasi:** Indeks massa tubuh Anda terpantau berada pada alur pemantauan aktif. Pastikan menjaga indeks massa tubuh dalam kisaran ideal **18.5 – 22.9 kg/m²** (Standar WHO Asia-Pasifik) untuk meminimalkan risiko gangguan kardiovaskular dan metabolisme.
+
+#### 2. 💧 Hidrasi & Keseimbangan Cairan
+- **Evaluasi:** Asupan cairan harian Anda berperan penting dalam menjaga elastisitas kulit, kesehatan ginjal, pelumasan sendi, serta konsentrasi mental. Pertahankan konsumsi air secara berkala sepanjang hari.
+
+#### 3. 🍎 Nutrisi & Keseimbangan Kalori
+- **Evaluasi:** Keseimbangan asupan energi harian dengan kebutuhan kalori basal (BMR) Anda sangat baik untuk menjaga massa otot dan mencegah penumpukan lemak visceral.
+
+#### 4. 🏃 Aktivitas Fisik & Kebugaran
+- **Evaluasi:** Aktivitas fisik dan langkah harian Anda mendukung sirkulasi darah yang lancar serta meningkatkan sensitivitas insulin tubuh.
+
+#### 5. 💤 Pemulihan & Kualitas Tidur
+- **Evaluasi:** Durasi tidur yang optimal (7-8 jam per malam) sangat penting untuk sekresi hormon pertumbuhan, regulasi kortisol (stres), serta pemulihan fungsi sel otak.
+
+---
+
+### 💡 Rekomendasi Terpersonalisasi Medi AI:
+1. **Hidrasi Teratur:** Minum 1-2 gelas air putih setiap 2-3 jam untuk mencapai target harian secara alami.
+2. **Keseimbangan Gizi:** Utamakan sumber karbohidrat kompleks, protein nirlemak, serta serat sayuran hijau pada setiap porsi makan.
+3. **Istirahat Berkualitas:** Hindari paparan *blue light* layar smartphone 30 menit sebelum tidur untuk mengoptimalkan fase tidur nyenyak (*Deep Sleep*).
+
+> [!NOTE]
+> *Laporan ini merupakan evaluasi edukasi gaya hidup berbasis data dasbor Anda dan bukan diagnosis medis formal. Konsultasikan dengan dokter spesialis untuk pemeriksaan laboratorium klinis berkala.*`;
+
+        resolve({ text });
+        return;
+      }
 
       // 1. Panduan Gejala (Symptom Checker)
       if (
@@ -18,28 +290,118 @@ export const getMockResponse = (userPrompt: string, enabledPlugins: string[] = [
         prompt.includes('sakit') ||
         prompt.includes('nyeri') ||
         prompt.includes('lambung') ||
-        prompt.includes('flu'))
+        prompt.includes('flu') ||
+        prompt.includes('gigi') ||
+        prompt.includes('mata') ||
+        prompt.includes('otot') ||
+        prompt.includes('sendi') ||
+        prompt.includes('kelamin') ||
+        prompt.includes('kemih') ||
+        prompt.includes('gatal'))
       ) {
-        resolve({
-          text: `### 🩺 Edukasi & Pemahaman Gejala Kesehatan
+        let text = '';
+        
+        if (prompt.includes('demam') || prompt.includes('batuk') || prompt.includes('flu') || prompt.includes('pilek')) {
+          text = `### 🩺 Edukasi Kesehatan: Demam & Batuk / Flu
+          
+Terima kasih telah membagikan kondisi Anda. Demam dan batuk umumnya merupakan respons pertahanan alami sistem kekebalan tubuh Anda untuk melawan infeksi virus atau bakteri.
 
-Terima kasih telah membagikan kondisi yang Anda rasakan. Memahami gejala awal adalah langkah penting dalam menjaga kesehatan tubuh, namun perlu diingat bahwa satu gejala dapat disebabkan oleh berbagai faktor yang berbeda.
-
-#### Kemungkinan Penyebab Umum:
-*   **Demam & Batuk:** Sering kali merupakan mekanisme pertahanan alami tubuh untuk melawan infeksi virus atau bakteri (seperti selesma, flu, atau infeksi saluran pernapasan).
-*   **Sakit Kepala / Pusing:** Dapat dipicu oleh kelelahan fisik, stres emosional, kurang tidur, dehidrasi, atau telat makan.
-*   **Nyeri Lambung / Sakit Perut:** Umumnya berhubungan dengan masalah pencernaan seperti gastritis (maag), pola makan tidak teratur, makanan pedas/asam, atau stres.
-
-#### Rekomendasi Perawatan Mandiri di Rumah:
-1.  **Istirahat Cukup:** Berikan waktu bagi tubuh untuk memulihkan energi dan memperbaiki jaringan yang terganggu.
-2.  **Cukupi Kebutuhan Cairan:** Minumlah air hangat secara teratur untuk menjaga kelembapan tenggorokan dan mencegah dehidrasi.
-3.  **Pantau Gejala:** Catat kapan gejala mulai dirasakan, tingkat keparahannya, serta hal yang memperingan atau memperburuk keluhan.
+#### Langkah Penanganan Awal yang Direkomendasikan:
+1. **Perbanyak Cairan:** Minum air putih hangat, sup bening, atau teh herbal hangat untuk melonggarkan tenggorokan dan menjaga hidrasi.
+2. **Istirahat Total:** Kurangi aktivitas fisik berat untuk memberikan energi penuh pada sistem kekebalan tubuh.
+3. **Kompres Hangat:** Letakkan kompres hangat di dahi atau lipatan ketiak untuk membantu menurunkan demam secara bertahap.
 
 > [!WARNING]
-> **Segera konsultasikan dengan tenaga medis apabila:**
-> Gejala tidak membaik dalam 3 hari, atau Anda mengalami tanda kedaruratan seperti sesak napas, nyeri dada hebat, demam tinggi yang tidak turun dengan obat penurun panas, muntah terus-menerus, atau leher kaku.
->
-> *Edukasi Kesehatan: Informasi ini ditujukan untuk edukasi umum dan bukan merupakan diagnosis medis resmi.*`,
+> Segera hubungi dokter jika demam berlangsung lebih dari 3 hari, suhu tubuh melebihi 39°C, atau disertai sesak napas berat.`;
+        } 
+        else if (prompt.includes('pusing') || prompt.includes('sakit kepala') || prompt.includes('migrain')) {
+          text = `### 🩺 Edukasi Kesehatan: Sakit Kepala & Pusing
+          
+Sakit kepala atau pusing sering disebabkan oleh ketegangan otot leher, stres emosional, kelelahan, kurang tidur, dehidrasi, atau telat makan.
+
+#### Langkah Penanganan Awal yang Direkomendasikan:
+1. **Relaksasi di Ruang Gelap:** Berbaringlah di ruangan yang tenang, redup, dan sejuk.
+2. **Hidrasi Cukup:** Minum segelas air putih dingin secara perlahan untuk rehidrasi tubuh.
+3. **Pijat Ringan:** Pijat pelipis, dahi, dan otot leher belakang Anda dengan lembut menggunakan minyak aromaterapi hangat.
+
+> [!WARNING]
+> Segera kunjungi IGD terdekat jika sakit kepala terasa sangat hebat secara mendadak (seperti petir), disertai muntah menyembur, mati rasa, atau kesulitan berbicara.`;
+        }
+        else if (prompt.includes('lambung') || prompt.includes('perut') || prompt.includes('maag') || prompt.includes('diare') || prompt.includes('mual')) {
+          text = `### 🩺 Edukasi Kesehatan: Gangguan Lambung / Perut
+          
+Nyeri perut atau lambung umumnya berkaitan dengan gangguan pencernaan seperti gastritis (maag), asam lambung naik (GERD), keracunan makanan ringan, atau iritasi usus.
+
+#### Langkah Penanganan Awal yang Direkomendasikan:
+1. **Pola Makan Halus:** Konsumsi makanan lunak (seperti bubur) dalam porsi kecil namun sering.
+2. **Hindari Makanan Pemicu:** Batasi makanan pedas, asam, bersantan, kopi, dan minuman bersoda untuk sementara waktu.
+3. **Minuman Jahe Hangat:** Jahe hangat terbukti membantu meredakan mual dan merilekskan otot lambung.
+
+> [!WARNING]
+> Konsultasikan dengan tenaga medis jika nyeri perut terasa sangat menusuk (terutama di perut kanan bawah), tinja berwarna hitam, atau muntah darah.`;
+        }
+        else if (prompt.includes('gigi') || prompt.includes('gusi')) {
+          text = `### 🩺 Edukasi Kesehatan: Sakit Gigi & Gusi
+          
+Sakit gigi biasanya disebabkan oleh gigi berlubang, infeksi akar gigi (abses), atau peradangan pada gusi (gingivitis).
+
+#### Langkah Penanganan Awal yang Direkomendasikan:
+1. **Kumur Air Garam Hangat:** Larutkan 1/2 sendok teh garam dalam segelas air hangat dan gunakan untuk berkumur guna mengurangi kuman di rongga mulut.
+2. **Kompres Es:** Tempelkan kompres es di pipi luar bagian yang sakit untuk meredakan nyeri dan pembengkakan.
+3. **Jaga Kebersihan Rongga Mulut:** Sikat gigi secara perlahan dengan sikat berbulu halus dan hindari makanan manis atau terlalu panas/dingin.
+
+> [!WARNING]
+> Segera kunjungi dokter gigi jika pembengkakan meluas ke pipi atau leher, atau jika Anda mengalami kesulitan menelan.`;
+        }
+        else if (prompt.includes('mata')) {
+          text = `### 🩺 Edukasi Kesehatan: Gangguan atau Sakit Mata
+          
+Mata merah, perih, atau berair dapat dipicu oleh iritasi debu, mata kering karena layar gadget, atau infeksi selaput mata (konjungtivitis).
+
+#### Langkah Penanganan Awal yang Direkomendasikan:
+1. **Kompres Dingin:** Tutup mata Anda dan letakkan kompres dingin bersih di atas kelopak mata selama 10 menit.
+2. **Tetes Air Mata Buatan:** Gunakan tetes mata pelembap (artificial tears) tanpa pengawet untuk meredakan iritasi ringan.
+3. **Istirahatkan Mata:** Gunakan aturan 20-20-20 (tiap 20 menit menatap layar, tatap objek berjarak 20 kaki selama 20 detik).
+
+> [!WARNING]
+> Segera temui dokter spesialis mata jika terjadi penurunan penglihatan secara mendadak, mata terasa sangat nyeri, atau sensitif berlebih terhadap cahaya.`;
+        }
+        else if (prompt.includes('kelamin') || prompt.includes('kemih') || prompt.includes('penis') || prompt.includes('urin') || prompt.includes('pipis') || prompt.includes('testis') || prompt.includes('vagina') || prompt.includes('intim')) {
+          text = `### 🩺 Edukasi Kesehatan: Kesehatan Saluran Kemih & Reproduksi
+          
+Keluhan perih atau tidak nyaman pada saluran kemih atau area reproduksi sering kali disebabkan oleh Infeksi Saluran Kemih (ISK), iritasi sabun pembersih, kelembapan berlebih, atau ketegangan otot panggul.
+
+#### Langkah Penanganan Awal yang Direkomendasikan:
+1. **Jangan Menahan Pipis:** Segera buang air kecil saat terasa dorongan untuk membersihkan bakteri dari saluran kemih.
+2. **Tingkatkan Hidrasi:** Minum air putih minimal 2-2.5 liter per hari untuk membantu membilas kuman keluar dari tubuh.
+3. **Jaga Kehigienisan:** Gunakan pakaian dalam berbahan katun yang longgar dan hindari penggunaan cairan antiseptik berparfum berlebih.
+
+> [!WARNING]
+> Temui dokter jika keluhan disertai demam menggigil, urine keruh/berdarah, atau adanya luka/cairan tidak biasa pada area intim.`;
+        }
+        else {
+          let organ = '';
+          const organMatch = prompt.match(/(?:sakit|nyeri|gejala)\s+([a-zA-Z]+)/i);
+          if (organMatch && organMatch[1]) {
+            organ = organMatch[1];
+          }
+          const organTitle = organ ? organ.charAt(0).toUpperCase() + organ.slice(1) : 'Tubuh';
+          
+          text = `### 🩺 Edukasi Kesehatan: Rasa Sakit atau Nyeri pada ${organTitle}
+          
+Rasa nyeri atau tidak nyaman pada bagian ${organTitle} dapat terjadi akibat ketegangan otot, peradangan ringan, atau kelelahan fisik setelah beraktivitas.
+
+#### Langkah Penanganan Awal yang Direkomendasikan:
+1. **Istirahatkan Area Terkait:** Hindari membebani bagian ${organTitle} secara berlebihan untuk sementara waktu.
+2. **Terapi Suhu:** Gunakan kompres es untuk nyeri baru/bengkak (akut), atau kompres hangat untuk ketegangan otot kronis/pegal.
+3. **Jaga Posisi Tubuh:** Pastikan posisi duduk, tidur, dan beraktivitas ergonomis untuk mengurangi beban mekanis.
+
+> [!WARNING]
+> Konsultasikan dengan dokter jika nyeri terasa makin memburuk seiring waktu, membatasi ruang gerak secara signifikan, atau disertai pembengkakan dan kemerahan hebat.`;
+        }
+
+        resolve({
+          text: text + `\n\n*Edukasi Kesehatan: Informasi ini ditujukan untuk edukasi umum dan bukan merupakan diagnosis medis resmi.*`,
           pluginUsed: 'Symptom',
         });
         return;

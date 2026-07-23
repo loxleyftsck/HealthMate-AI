@@ -187,17 +187,7 @@ export const renderMarkdown = (text: string): React.ReactNode[] => {
       flushQuote();
     }
 
-    // Handle Headings
-    if (line.startsWith('###')) {
-      flushList();
-      elements.push(
-        <h3 key={`h3-${i}`} className="text-base font-bold font-display text-gray-900 dark:text-white mt-4 mb-2 first:mt-0">
-          {parseInlineStyles(line.substring(3).trim())}
-        </h3>
-      );
-      continue;
-    }
-
+    // Handle Headings (Must check longer heading levels first!)
     if (line.startsWith('####')) {
       flushList();
       elements.push(
@@ -208,11 +198,32 @@ export const renderMarkdown = (text: string): React.ReactNode[] => {
       continue;
     }
 
-    // Handle lists
-    if (line.startsWith('*') || line.startsWith('-')) {
-      const itemText = line.substring(1).trim();
+    if (line.startsWith('###')) {
+      flushList();
+      elements.push(
+        <h3 key={`h3-${i}`} className="text-base font-bold font-display text-gray-900 dark:text-white mt-4 mb-2 first:mt-0">
+          {parseInlineStyles(line.substring(3).trim())}
+        </h3>
+      );
+      continue;
+    }
+
+    if (line.startsWith('##')) {
+      flushList();
+      elements.push(
+        <h2 key={`h2-${i}`} className="text-lg font-bold font-display text-gray-900 dark:text-white mt-5 mb-2">
+          {parseInlineStyles(line.substring(2).trim())}
+        </h2>
+      );
+      continue;
+    }
+
+    // Handle lists (bullet points and numbered lists)
+    const isNumberedList = /^\d+[\.\)]\s/.test(line);
+    if ((line.startsWith('*') && !line.startsWith('**')) || line.startsWith('-') || isNumberedList) {
+      const itemText = isNumberedList ? line.replace(/^\d+[\.\)]\s*/, '') : line.substring(1).trim();
       currentList.push(
-        <li key={`li-${i}`} className="list-disc ml-5 mb-1 text-gray-600 dark:text-gray-300">
+        <li key={`li-${i}`} className={`${isNumberedList ? 'list-decimal' : 'list-disc'} ml-5 mb-1 text-gray-600 dark:text-gray-300`}>
           {parseInlineStyles(itemText)}
         </li>
       );
